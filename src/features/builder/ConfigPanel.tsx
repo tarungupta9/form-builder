@@ -1,4 +1,4 @@
-import { type Field, type FormTemplate, hasRequiredAxis } from '../../domain/template';
+import { type Field, type FormTemplate, takesAnswer } from '../../domain/template';
 import { definitionOf } from '../../fields/registry';
 import { uiOf } from '../../fields/ui-registry';
 import { Setting, controlClass } from '../../ui/Setting';
@@ -56,7 +56,6 @@ function FieldSettings({
   onFieldChange,
 }: ConfigPanelProps & { field: Field }) {
   const { Editor } = uiOf(field);
-  const { logic } = field;
   return (
     <>
       <h2 id={CONFIG_IDS.panelTitle} tabIndex={-1} className={styles.panelTitle}>
@@ -80,13 +79,13 @@ function FieldSettings({
             />
           )}
         </Setting>
-        {hasRequiredAxis(logic) && (
+        {takesAnswer(field) && (
           <Switch
             label="Required"
             description="Respondents must answer before they can submit."
-            checked={logic.defaultRequired}
+            checked={field.logic.defaultRequired}
             onChange={(defaultRequired) => {
-              onFieldChange({ ...field, logic: { ...logic, defaultRequired } });
+              onFieldChange({ ...field, logic: { ...field.logic, defaultRequired } });
             }}
           />
         )}

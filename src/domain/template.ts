@@ -126,6 +126,17 @@ export function hasRequiredAxis(logic: FieldLogic): logic is InputFieldLogic {
   return 'defaultRequired' in logic;
 }
 
+/** A field that takes an answer, so it has the required axis. */
+export type InputField = Extract<Field, { logic: InputFieldLogic }>;
+
+/**
+ * Narrows the field itself, not only its logic, so code that writes the field back keeps the
+ * narrowing: `{ ...field, logic: { ...field.logic, defaultRequired } }` then type-checks for
+ * every input type, and display-only types (section header, calculation) join the union with
+ * no change to the caller.
+ */
+export const takesAnswer = (field: Field): field is InputField => hasRequiredAxis(field.logic);
+
 export const emptyGroup = (): ConditionGroup => ({ match: 'all', conditions: [] });
 
 export const defaultFieldLogic = (): FieldLogic => ({
