@@ -80,4 +80,31 @@ describe('Short text definition', () => {
       expect(textDefinition.initialValue(name, isoDate('2026-11-01'))).toBeUndefined();
     });
   });
+
+  describe('export', () => {
+    const website = textField('Website', {
+      config: { placeholder: '', prefix: 'https://', suffix: '.com' },
+    });
+
+    it('exports an answer with its prefix and suffix, as the respondent saw it', () => {
+      expect(textDefinition.toExport(website, text('  acme '))).toEqual({
+        kind: 'answer',
+        label: 'Website',
+        value: { kind: 'text', text: 'https://acme.com' },
+      });
+    });
+
+    it('exports an empty or whitespace-only answer as not answered, without its adornments', () => {
+      const notAnswered = { kind: 'answer', label: 'Website', value: { kind: 'empty' } };
+
+      expect(textDefinition.toExport(website, undefined)).toEqual(notAnswered);
+      expect(textDefinition.toExport(website, text('   '))).toEqual(notAnswered);
+    });
+
+    it('falls back to "Untitled field" for a field with no label', () => {
+      expect(textDefinition.toExport(textField('  '), text('Ada'))).toMatchObject({
+        label: 'Untitled field',
+      });
+    });
+  });
 });

@@ -10,3 +10,19 @@ export function formatDateTime(value: IsoDateTime): string {
     new Date(value),
   );
 }
+
+/**
+ * When a response was submitted, for its record and PDF: "1 November 2026 at 09:30 GMT". The
+ * viewer's own time zone, named, so a re-download in another zone is still unambiguous.
+ * (`Intl` refuses `dateStyle` together with `timeZoneName`, hence the separate parts.)
+ */
+export function formatSubmittedAt(value: IsoDateTime): string {
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).format(new Date(value));
+}

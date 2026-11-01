@@ -1,10 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react';
-import axe from 'axe-core';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { newTemplateId } from '../../domain/ids';
 import type { FormResponse } from '../../domain/response';
 import type { FormTemplate } from '../../domain/template';
 import { STORAGE_KEYS, createRepositories } from '../../storage/repositories';
 import { template, textField } from '../../test/fixtures';
+import { expectNoAxeViolations } from '../../test/axe';
 import { renderApp } from '../../test/renderApp';
 
 function saveTemplate(form: FormTemplate): FormTemplate {
@@ -20,7 +20,10 @@ function storedResponses(): FormResponse[] {
 /** Another tab writes to storage: the change lands, then the browser fires `storage` here. */
 function changeInAnotherTab(write: () => void) {
   write();
-  window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEYS.templates }));
+  // The event re-renders every screen subscribed to storage; act applies that before the test goes on.
+  act(() => {
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEYS.templates }));
+  });
 }
 
 const expenseClaim = () => {
@@ -226,20 +229,17 @@ describe('Fill page', () => {
     const { form } = expenseClaim();
     saveTemplate(form);
     const { user, container } = renderApp(`/templates/${form.id}/respond`);
-    // jsdom does no layout, so contrast is checked by hand against the tokens instead.
-    const violations = async () =>
-      (await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations;
 
     await screen.findByRole('button', { name: 'Submit response' });
-    expect(await violations()).toEqual([]);
+    await expectNoAxeViolations(container);
 
     await user.click(screen.getByRole('button', { name: 'Submit response' }));
-    expect(await violations()).toEqual([]);
+    await expectNoAxeViolations(container);
 
     await user.type(screen.getByRole('textbox', { name: /Employee name/ }), 'Ada');
     await user.type(screen.getByRole('textbox', { name: /Purpose/ }), 'Conference');
     await user.click(screen.getByRole('button', { name: 'Submit response' }));
     await screen.findByRole('heading', { name: 'Response submitted' });
-    expect(await violations()).toEqual([]);
+    await expectNoAxeViolations(container);
   });
 });

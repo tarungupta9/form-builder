@@ -1,0 +1,134 @@
+/*
+ * The response as a document, on screen and in print. Nothing here is print-specific: page size,
+ * page numbers and page breaks are in print.css, which only the print frame loads.
+ */
+.document {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 760px;
+  padding: var(--space-8);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-5);
+  border-bottom: 2px solid var(--color-text);
+}
+
+.title {
+  overflow-wrap: anywhere;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+}
+
+.description {
+  max-width: 70ch;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  color: var(--color-text-secondary);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-8);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-muted);
+}
+
+.meta dt {
+  font-weight: 600;
+}
+
+/* G-3: the full ID, small and monospaced, so it can be matched against storage. */
+.id {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.answers {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--space-1) var(--space-6);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+@media (width <= 560px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.label {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.value {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--color-answer);
+}
+
+/* Long text keeps its line breaks, with no flag in the export model. */
+.text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.empty {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.list {
+  padding-left: var(--space-5);
+  overflow-wrap: anywhere;
+}
+
+.note {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-muted);
+}
+
+.section {
+  overflow-wrap: anywhere;
+  padding-top: var(--space-2);
+  font-weight: 700;
+}
+
+h2.section {
+  font-size: 22px;
+  line-height: 28px;
+}
+
+h3.section {
+  font-size: 19px;
+  line-height: 26px;
+}
+
+h4.section,
+h5.section,
+h6.section {
+  font-size: 17px;
+  line-height: 24px;
+}

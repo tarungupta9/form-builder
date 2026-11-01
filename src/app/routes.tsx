@@ -1,6 +1,7 @@
 import type { RouteObject } from 'react-router';
 import { BuilderPage } from '../features/builder/BuilderPage';
 import { FillPage } from '../features/fill/FillPage';
+import { ResponsesPage } from '../features/responses/ResponsesPage';
 import { TemplatesPage } from '../features/templates-list/TemplatesPage';
 import { AppShell } from './AppShell';
 import { NotFound } from './NotFound';
@@ -17,6 +18,7 @@ export const routes: RouteObject[] = [
       { path: 'templates/new', element: <BuilderPage /> },
       { path: 'templates/:templateId/edit', element: <BuilderPage /> },
       { path: 'templates/:templateId/respond', element: <FillPage /> },
+      { path: 'templates/:templateId/responses', element: <ResponsesPage /> },
       { path: '*', element: <NotFound /> },
     ],
   },

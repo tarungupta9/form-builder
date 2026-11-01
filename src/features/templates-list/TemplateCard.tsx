@@ -44,6 +44,15 @@ export function TemplateCard({ template, responseCount }: TemplateCardProps) {
         <ButtonLink to={`/templates/${template.id}/edit`} variant="secondary" size="sm" icon="edit">
           Open in builder{forTitle}
         </ButtonLink>
+        {/* Shown at 0 responses too: the empty responses page explains itself (G-11). */}
+        <ButtonLink
+          to={`/templates/${template.id}/responses`}
+          variant="quiet"
+          size="sm"
+          icon="file"
+        >
+          View responses{forTitle}
+        </ButtonLink>
       </div>
       {!canRespond && (
         <p id={reasonId} className={styles.meta}>

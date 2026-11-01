@@ -1,6 +1,6 @@
 # Implementation Plan — Verified Slices
 
-- **Status:** Agreed. v0.1 and v0.2 signed off; v0.3 is next (see the [tracker](#6-progress-tracker)).
+- **Status:** Agreed. v0.1–v0.3 signed off; v0.4 and v0.5 are next, built in parallel (see the [tracker](#6-progress-tracker)).
 - **Date:** 2026-11-01
 - **Replaces:** the layer-by-layer delivery plan in [high-level-design.md §10](high-level-design.md#10-delivery-plan).
 
@@ -171,7 +171,7 @@ The last two pin reviewer invariants before the condition editor exists. v0.6 pi
 
 - `/templates/:templateId/responses`, showing the submitted responses newest first, with empty and not-found states.
 - _Download PDF_ after submit, and _Re-download PDF_ on each row.
-- `toExportModel` (pure), designed to render on screen as well as in print (v0.10 shows submitted responses with it), `PrintDocument`, and `printDocument` (a hidden iframe, the print stylesheet, page numbers in the footer, the file name from `document.title`). The button shows a busy state while the PDF is prepared.
+- `toExportModel` (pure), designed to render on screen as well as in print (v0.10 shows submitted responses with it), `ResponseDocument` (the one view, on screen and in print; named `PrintDocument` before v0.3), and `printDocument` (a hidden iframe, the print stylesheet, page numbers in the footer, the file name from `document.title`). The button shows a busy state while the PDF is prepared.
 - `toExport` for the text plugin.
 
 **Use cases to test**
@@ -365,7 +365,7 @@ The last two pin reviewer invariants before the condition editor exists. v0.6 pi
 
 - Builder crash recovery (D-33), if time allows.
 - Code-split routes.
-- `vitest-axe` on every page in its key states. A full keyboard and VoiceOver audit against [HLD §7](high-level-design.md#7-accessibility-plan-wcag-22-aa): contrast, 24×24 px targets, focus never hidden, reduced motion.
+- `axe-core` (through `src/test/axe.ts`) on every page in its key states. A full keyboard and VoiceOver audit against [HLD §7](high-level-design.md#7-accessibility-plan-wcag-22-aa): contrast, 24×24 px targets, focus never hidden, reduced motion.
 - The README complete: run steps, storage schema, decisions, and "with more time".
 - The AI usage log with at least five well-described entries.
 - Unadopted parts-bin files deleted.
@@ -381,19 +381,19 @@ Update this table at each sign-off.
 
 **Reordered during v0.2 (owner's call):** the builder workflow slice moved from v0.6 to after the two rules-engine slices, which become v0.6 and v0.7. Conditional logic is the most heavily graded part of the assessment, so it should land while there is the most time left; reordering, preview and the unsaved-changes guard are workflow comfort that a reviewer weighs less. The versions were renumbered rather than keeping the old numbers out of order, because each one is a git tag and tags should read in the order they were made. Preview now arrives after conditions, so the visibility slice is demonstrated in Fill mode only.
 
-| Version | Slice                                   | Status      | Signed off | Notes                                          |
-| ------- | --------------------------------------- | ----------- | ---------- | ---------------------------------------------- |
-| v0.1    | Skeleton: list and builder              | Signed off  | 2026-11-01 | Adds D-34, D-35; revises D-19, D-32 (ADR 0009) |
-| v0.2    | Fill and submit                         | Signed off  | 2026-11-01 | Adds ADR 0010; reorders v0.6–v0.8 (see above)  |
-| v0.3    | Responses and PDF                       | Not started | —          |                                                |
-| v0.4    | Long text, number, date, section header | Not started | —          |                                                |
-| v0.5    | Choice fields                           | Not started | —          |                                                |
-| v0.6    | Conditional visibility                  | Not started | —          | Was v0.7                                       |
-| v0.7    | Conditional required and safe editing   | Not started | —          | Was v0.8                                       |
-| v0.8    | Builder workflow                        | Not started | —          | Was v0.6                                       |
-| v0.9    | Calculation and file upload             | Not started | —          |                                                |
-| v0.10   | Drafts and resume                       | Not started | —          |                                                |
-| v1.0    | Polish and submission                   | Not started | —          |                                                |
+| Version | Slice                                   | Status      | Signed off | Notes                                                                                                                                                                                                                                                                                                                 |
+| ------- | --------------------------------------- | ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1    | Skeleton: list and builder              | Signed off  | 2026-11-01 | Adds D-34, D-35; revises D-19, D-32 (ADR 0009)                                                                                                                                                                                                                                                                        |
+| v0.2    | Fill and submit                         | Signed off  | 2026-11-01 | Adds ADR 0010; reorders v0.6–v0.8 (see above)                                                                                                                                                                                                                                                                         |
+| v0.3    | Responses and PDF                       | Signed off  | 2026-11-01 | ADR 0011 (D-30, resolves Q-2) and ADR 0012 (per-item quarantine, supersedes part of 0007). Also lands the pre-v0.4 seam fixes L1–L3, L5 and O-2. Owner exception to ground rule 1: v0.4 and v0.5 are built in parallel worktrees off `v0.3`; v0.4 merges first, then v0.5 is rebased and re-runs `check:seam -- v0.4` |
+| v0.4    | Long text, number, date, section header | Not started | —          |                                                                                                                                                                                                                                                                                                                       |
+| v0.5    | Choice fields                           | Not started | —          |                                                                                                                                                                                                                                                                                                                       |
+| v0.6    | Conditional visibility                  | Not started | —          | Was v0.7                                                                                                                                                                                                                                                                                                              |
+| v0.7    | Conditional required and safe editing   | Not started | —          | Was v0.8                                                                                                                                                                                                                                                                                                              |
+| v0.8    | Builder workflow                        | Not started | —          | Was v0.6                                                                                                                                                                                                                                                                                                              |
+| v0.9    | Calculation and file upload             | Not started | —          |                                                                                                                                                                                                                                                                                                                       |
+| v0.10   | Drafts and resume                       | Not started | —          |                                                                                                                                                                                                                                                                                                                       |
+| v1.0    | Polish and submission                   | Not started | —          |                                                                                                                                                                                                                                                                                                                       |
 
 ---
 

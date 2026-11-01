@@ -72,6 +72,15 @@ export type Effect = VisibilityEffect | RequiredEffect;
 // Field configs
 // ---------------------------------------------------------------------------------------------
 
+/** One choice of a single or multi select. Answers store the ID, so a rename keeps them (D-11). */
+export interface Option {
+  id: OptionId;
+  label: string;
+}
+
+/** Decimal places a Number field accepts and a calculation shows. */
+export type Decimals = 0 | 1 | 2 | 3 | 4;
+
 export interface TextConfig {
   placeholder: string;
   minLength?: number;
@@ -88,6 +97,10 @@ export interface TextConfig {
  * One entry per field type: its config, its value and which logic axes it has. Adding a field
  * type means adding one entry here; the `Field` union, `FieldOf<K>` and `FieldValueOf<K>` all
  * follow from it.
+ *
+ * Keys follow the palette order, which is also where each later slice inserts its types, so
+ * slices built side by side merge mechanically: text, textarea, number, date (v0.4),
+ * singleSelect, multiSelect (v0.5), section (v0.4), then file and calculation (v0.9).
  */
 export interface FieldTypeMap {
   text: { config: TextConfig; value: TextValue; logic: InputFieldLogic };

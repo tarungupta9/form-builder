@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import type { TemplateId } from '../../domain/ids';
 import type { SubmittedResponse } from '../../domain/response';
 import { Button, ButtonLink } from '../../ui/Button';
+import { FailureAlert } from '../../ui/ErrorSummary';
 import { formatDateTime } from '../../ui/format';
+import { PRINT_FAILURE, usePdfDownload } from '../export/usePdfDownload';
 import styles from './Fill.module.css';
 
 /** Why a template cannot be filled in yet (D-20). The card shows the same reason. */
@@ -27,9 +29,13 @@ interface SubmittedNoticeProps {
   onFillAnother: () => void;
 }
 
-/** Shown in place of the form after submit. Its heading takes focus, so the outcome is heard. */
+/**
+ * Shown in place of the form after submit. Its heading takes focus, so the outcome is heard.
+ * The response can be downloaded from here straight away, and from the responses list later.
+ */
 export function SubmittedNotice({ response, onFillAnother }: SubmittedNoticeProps) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const { busyId, failed, download } = usePdfDownload();
   useEffect(() => {
     heading.current?.focus();
   }, []);
@@ -43,9 +49,23 @@ export function SubmittedNotice({ response, onFillAnother }: SubmittedNoticeProp
         Submitted{' '}
         <time dateTime={response.submittedAt}>{formatDateTime(response.submittedAt)}</time>.
       </p>
-      <Button variant="secondary" onClick={onFillAnother}>
-        Fill in another response
-      </Button>
+      {failed && <FailureAlert {...PRINT_FAILURE} />}
+      <div className={styles.noticeActions}>
+        <Button
+          variant="primary"
+          icon="download"
+          busy={busyId === response.id}
+          onClick={() => void download(response)}
+        >
+          Download PDF
+        </Button>
+        <Button variant="secondary" onClick={onFillAnother}>
+          Fill in another response
+        </Button>
+        <ButtonLink to={`/templates/${response.templateId}/responses`} variant="quiet">
+          View all responses
+        </ButtonLink>
+      </div>
     </section>
   );
 }

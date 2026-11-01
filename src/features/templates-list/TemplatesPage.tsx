@@ -1,7 +1,8 @@
 import { usePageTitle } from '../../app/usePageTitle';
-import { useRepositories } from '../../storage/StorageContext';
+import { useRepositories, useSetAside } from '../../storage/StorageContext';
 import { ButtonLink } from '../../ui/Button';
 import { PageHeader } from '../../ui/PageHeader';
+import { SetAsideNotice } from '../storage-error/SetAsideNotice';
 import { StorageErrorPanel } from '../storage-error/StorageErrorPanel';
 import { TemplateCard } from './TemplateCard';
 import styles from './TemplatesPage.module.css';
@@ -14,6 +15,8 @@ export function TemplatesPage() {
   const { templates: repository, responses: responseRepository } = useRepositories();
   const templates = useTemplates();
   const responseCounts = useResponseCounts();
+  const templatesSetAside = useSetAside(repository);
+  const responsesSetAside = useSetAside(responseRepository);
 
   if (!templates.ok) {
     return (
@@ -46,6 +49,8 @@ export function TemplatesPage() {
   return (
     <>
       <PageHeader title="Templates" actions={templates.value.length > 0 && newTemplate} />
+      <SetAsideNotice setAside={templatesSetAside} noun="template" />
+      <SetAsideNotice setAside={responsesSetAside} noun="response" />
       {templates.value.length === 0 ? (
         <section className={styles.empty} aria-labelledby="empty-title">
           <h2 id="empty-title" className={styles.emptyTitle}>

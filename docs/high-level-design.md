@@ -108,7 +108,7 @@ The spec asks us to decide the ambiguous 10–20% ourselves and to document the 
 | Boundary validation | `zod` schemas for everything read from `localStorage` | Hand-written type guards, which are verbose and drift from the types | [0004](decisions/0004-zod-at-the-storage-boundary.md) (D-27) |
 | Drag and drop | `@dnd-kit/sortable`, which has a keyboard sensor and screen-reader announcements, **plus** move up/down buttons | Native HTML5 DnD, which is not keyboard accessible | D-28, ADR in v0.8 |
 | Styling | CSS Modules + design tokens as CSS custom properties | Tailwind, which gets noisy in JSX the reviewer has to read | [0005](decisions/0005-css-modules-and-tokens.md) (D-29) |
-| PDF | Print-optimised document in a hidden iframe → `print()` **(Q-2)** | A hand-written PDF byte generator | D-30, ADR in v0.3 |
+| PDF | Print-optimised document in a hidden iframe → `print()` **(Q-2, resolved)** | A hand-written PDF byte generator | [0011](decisions/0011-pdf-through-the-print-dialog.md) (D-30) |
 | Testing | Vitest + Testing Library + user-event, with `axe-core` run directly (`axe.run`; colour contrast is checked by hand, since jsdom does no layout). One Playwright smoke test (optional). | Jest, which is slower and needs extra config under Vite | [0006](decisions/0006-vitest-and-testing-library.md) (D-31) |
 | Lint | ESLint (`typescript-eslint` strict, `jsx-a11y`, `react-hooks`) + Prettier | — | — |
 
@@ -181,16 +181,18 @@ src/
     fill/              FillPage, ResponseSession, FillForm, notices, useFormRuntime, useSaveResponse,
                        responseIssues (asks each plugin, so it sits above fields/, not in domain/),
                        submission
-    storage-error/     StorageErrorPanel
-    responses/         ResponsesPage, ResponseRow                                (v0.3)
-    export/            toExportModel(), PrintDocument, printDocument()           (v0.3)
+      storage-error/     StorageErrorPanel, SetAsideNotice
+    responses/         ResponsesPage, ResponseRow, useTemplateResponses           (v0.3)
+    export/            toExportModel() and pdfFileName(), ResponseDocument (the one view of a
+                       response, on screen and in print), printDocument(), usePdfDownload,
+                       print.css                                                 (v0.3)
   storage/             collection (one generic Collection per key), repositories, schemas,
                        migrations, result, storageMessages, StorageContext
   ui/                  Button (+ ButtonLink, IconButton), Dialog, ErrorSummary (+ FailureAlert),
                        FormField, LiveRegion, PageHeader, Setting, Switch, format, icons,
                        useFocusRequest
-  styles/              tokens.css, base.css; print.css (v0.3)
-  test/                setup, renderApp, fixtures, flows/ (each slice's demo script as a test)
+  styles/              tokens.css, base.css (the print stylesheet lives with the export feature)
+  test/                setup, renderApp, fixtures, axe, flows/ (each slice's demo script as a test)
 scripts/
   check-seam.mjs       fails when a field-type slice edits a file outside the plugin seam
 ```
@@ -202,7 +204,7 @@ scripts/
 | `/` | Templates list | empty ("Create your first template"), storage error |
 | `/templates/new` | Builder with an unsaved blank template. After the first save, the URL is replaced with the edit URL. | — |
 | `/templates/:templateId/edit` | Builder | not found, storage error |
-| `/templates/:templateId/responses` | Responses list: in-progress drafts, then submitted responses **(v0.3; drafts v0.10)** | empty, not found |
+| `/templates/:templateId/responses` | Responses list: in-progress drafts, then submitted responses, newest first, each with _Re-download PDF_ **(v0.3; drafts v0.10)** | empty, not found, storage error, items set aside |
 | `/templates/:templateId/respond` | Fill mode with an unsaved draft. On first input, the URL is replaced with the draft's URL (D-23). | not found, template has no fields, storage error |
 | `/templates/:templateId/responses/:responseId` | Fill mode for a saved draft (resume). A submitted response opens read-only. **(v0.10)** | not found, template deleted, template changed since the draft started |
 | `*` | Not found | — |
@@ -383,7 +385,7 @@ formBuilder:v1:recovery    →  { schemaVersion: 1, items: Record<TemplateId | '
 | Not one key for everything | Saving a template would otherwise re-serialise every response. |
 | `Record` keyed by ID, not an array | O(1) lookup and update, with no duplicates. |
 | A `schemaVersion` envelope | `migrations.ts` upgrades old shapes on read. Without the version there is no safe way to evolve the shape. |
-| zod parse on each cache fill | Data in storage is untrusted (user edits, old versions, other tabs). It is parsed when the cache is filled (first read, and after any write or `storage` event), not on every access. If any item fails, the raw value is copied to `formBuilder:quarantine:<key>:<ISO timestamp>`, the whole collection reports an error and refuses writes until the user chooses to start again (ADR 0007). We **never silently wipe** user data. |
+| zod parse on each cache fill | Data in storage is untrusted (user edits, old versions, other tabs). It is parsed when the cache is filled (first read, and after any write or `storage` event), not on every access, **item by item**. An item that fails is set aside on its own: the key's stored value is first copied to `formBuilder:quarantine:<key>:<ISO timestamp>`, then the key is rewritten with the valid items, which load, and the screen says how many items were set aside and names the backup key ([ADR 0012](decisions/0012-set-aside-unreadable-items.md)). If the backup cannot be made, or the key cannot be read at all, the whole collection reports an error and refuses writes until the user chooses to start again (ADR 0007). We **never silently wipe** user data. |
 | `QuotaExceededError` handling | Writes return a result type. The UI shows "Storage is full" and keeps the in-memory state so no work is lost. |
 | Cross-tab | A `storage` event invalidates the in-memory cache, so every screen shows the other tab's change. Fill mode keeps the template as it was when the form opened (ADR 0010). From v0.8 the builder compares `updatedAt` on save and warns if another tab saved in the meantime (last write wins, but never silently). |
 
@@ -407,6 +409,7 @@ interface FieldDefinition<K extends FieldType> {
   readValue(field: FieldOf<K>, value: FieldValue | undefined): FieldValueOf<K> | undefined;
   initialValue(field: FieldOf<K>, today: IsoDate): FieldValueOf<K> | undefined;   // e.g. date prefill
   validateValue(field: FieldOf<K>, value: FieldValueOf<K> | undefined, required: boolean): string | null;  // first problem only
+  toExport(field: FieldOf<K>, value: FieldValueOf<K> | undefined): ExportBlock;   // how it reads in the export (§5.6)
 }
 
 interface FieldUi<K extends FieldType> {
@@ -416,7 +419,7 @@ interface FieldUi<K extends FieldType> {
 }
 ```
 
-Members join as the slices need them: `toExport` in v0.3, `paletteGroup` with the section header in v0.4, `predicateKind` (which operators a condition on this field offers) in v0.6. There is no read-only renderer mode: a submitted response is shown on screen from the export model (§5.6), the same content the PDF prints, so the screen and the PDF cannot disagree and renderers stay input-only (owner's decision at v0.2).
+Members join as the slices need them: `toExport` in v0.3, `predicateKind` (which operators a condition on this field offers) in v0.6. There is no read-only renderer mode: a submitted response is shown on screen from the export model (§5.6), the same content the PDF prints, so the screen and the PDF cannot disagree and renderers stay input-only (owner's decision at v0.2).
 
 **Adding an 11th type:** create `fields/<new>/` (definition, editor, renderer, tests), add its config interface and `FieldTypeMap` entry in `domain/template.ts`, and add one line to each registry. Builder, Fill, PDF, validation and conditions need no changes, as long as the type's value reuses an existing value kind. `npm run check:seam -- <tag>` shows the diff and fails on anything else.
 
@@ -508,8 +511,10 @@ interface Collection<Id extends string, T> {      // one per localStorage key
   put(item: T): Result<void, StorageError>;
   remove(ids: readonly Id[]): Result<void, StorageError>;
   reset(): Result<void, StorageError>;             // offered only once corrupt data is backed up
+  setAside(): readonly SetAside[];                 // items set aside as unreadable in this tab (ADR 0012)
   subscribe(listener: () => void): () => void;     // this tab's writes and other tabs' storage events
 }
+interface SetAside { count: number; backupKey: string }
 interface Repositories { templates: Collection<TemplateId, FormTemplate>; responses: Collection<ResponseId, FormResponse> }
 ```
 
@@ -520,27 +525,45 @@ One generic collection replaces the per-entity repositories this section first p
 ```ts
 function toExportModel(response: SubmittedResponse): ExportDocument;  // pure and fully unit-tested
 function printDocument(doc: ExportDocument): Promise<void>;           // the thin DOM/iframe side effect
+function ResponseDocument(props: { document: ExportDocument }): ReactNode;  // the one view, screen and print
+
+interface ExportDocument {
+  title: string;
+  description: string;          // '' means none
+  responseId: ResponseId;
+  submittedAt: IsoDateTime;     // formatted when rendered, so the model is free of locale
+  blocks: ExportBlock[];        // one per snapshot field, in form order
+}
+
+// In fields/contract.ts: what each plugin's toExport returns. Presentation shapes, not field types.
+type ExportValue =
+  | { kind: 'empty'; text?: string }       // "Not answered", or the plugin's own words
+  | { kind: 'text'; text: string }         // line breaks kept (pre-wrap), so long text needs no flag
+  | { kind: 'list'; items: string[] };     // multi-select labels, file metadata lines
+type ExportBlock =
+  | { kind: 'section'; text: string; level: 2 | 3 | 4 | 5 | 6 }
+  | { kind: 'answer'; label: string; value: ExportValue; note?: string };   // note: e.g. the file footnote
 ```
 
-`ExportDocument` contains the title, the description, `submittedAt`, and an ordered list of `{ kind: 'section', text, level } | { kind: 'answer', label, display: string | string[] }`. It is built from the **snapshot**, so hidden fields are already absent. It renders on screen as well as in print: the read-only view of a submitted response (v0.10) uses it too.
+The model is built from the **snapshot**, so hidden fields are already absent, and a re-download after the template changes still shows what was submitted. `ResponseDocument` renders every shape (sections as `h2`–`h6`, lists as `<ul>`, notes under their answer) and makes no print assumptions, so the read-only view of a submitted response (v0.10) uses it as it is. The full vocabulary ships in v0.3, tested with hand-built documents, so later field types plug in without editing the view ([ADR 0011](decisions/0011-pdf-through-the-print-dialog.md)).
 
 ---
 
-## 6. PDF export (Q-2)
+## 6. PDF export (Q-2, resolved: A)
 
 "Browser-native APIs only" leaves two real options:
 
 | | A. Print document + `window.print()` (recommended) | B. Hand-written PDF bytes → `Blob` download |
 | --- | --- | --- |
-| How it works | Render `PrintDocument` into a hidden `<iframe>` with a print stylesheet (`@page` size and margins, running header, `break-inside: avoid` per answer), then call `iframe.contentWindow.print()`. The user picks "Save as PDF". `document.title` sets the file name. | Write the PDF object model by hand (catalog, pages, Helvetica text objects, xref), with our own line wrapping and pagination, then download it through an object URL. |
+| How it works | Render `ResponseDocument` into an off-screen `<iframe>` with a print stylesheet (`@page` size and margins, page numbers in the footer, `break-inside: avoid` per answer), then call `iframe.contentWindow.print()`. The user picks "Save as PDF". `document.title` sets the file name. | Write the PDF object model by hand (catalog, pages, Helvetica text objects, xref), with our own line wrapping and pagination, then download it through an object URL. |
 | Output quality | Best: real typography, selectable text, full Unicode, layout in CSS. | Basic: standard-14 fonts only, so no characters outside WinAnsi (emoji, CJK) unless we embed a font. |
 | UX | Goes through the print dialog, so the download is not one click. | A true one-click download. |
 | Cost and risk | Low. About 150 lines plus CSS. | High. About 500+ lines covering text measurement, wrapping, pagination and escaping. |
 | Testability | `toExportModel` is pure. The print view can be snapshot- and axe-tested. | Byte output is hard to assert on beyond structure. |
 
-**Recommendation: A.** The spec rewards output that "looks like a real export", and A produces a better-looking document in a fraction of the time. The print-dialog step goes in the README as a known trade-off, and B goes under "with more time".
+**Decision: A** ([ADR 0011](decisions/0011-pdf-through-the-print-dialog.md)). The spec rewards output that "looks like a real export", and A produces a better-looking document in a fraction of the time. The print-dialog step is in the README as a known trade-off, and B is under "with more time".
 
-Export layout: a header with the form title, the description when set, "Submitted 31 Oct 2026, 14:05" and the response ID. Section headers become typographic sections. Each answer is a label/value pair. Unanswered optional fields show "Not answered" in muted text. Numbers keep their prefix and suffix and use `Intl.NumberFormat` with the configured decimals. Dates use a long locale format. Multi-select answers are a list. Files appear as `name · 2.4 MB · PDF` with a footnote: _"Attachments are listed by name only; file contents are not included in this export."_ Page numbers go in the footer.
+Export layout: a header with the form title, the description when set, "Submitted 1 November 2026 at 14:05 GMT" (the viewer's zone, named) and the full response ID. Section headers become typographic sections. Each answer is a label/value pair. Unanswered optional fields show "Not answered" in muted text. Numbers keep their prefix and suffix and use `Intl.NumberFormat` with the configured decimals. Dates use a long locale format. Multi-select answers are a list. Files appear as a list of `name · 2.4 MB · PDF` lines with a note under the answer: _"Attachments are listed by name only; file contents are not included in this export."_ Page numbers go in the footer, where the browser supports `@page` margin boxes. The file name is `<title> – response <YYYY-MM-DD HHmm>`, from the document title.
 
 ---
 
@@ -607,7 +630,7 @@ Delivery follows [`implementation-plan.md`](implementation-plan.md): eleven thin
 | # | Question | Recommendation |
 | --- | --- | --- |
 | **Q-1** | How should multiple conditions combine? | **Resolved (D-1):** one flat group per effect, each with its own `all \| any` (default `all`), with hide-beats-show and require-beats-unrequire for conflicts. Nested groups are deferred. |
-| **Q-2** | PDF approach | A: print document + `print()`. B (hand-written PDF bytes) goes under "with more time". |
+| **Q-2** | PDF approach | **Resolved (D-30, ADR 0011):** A, a print document + `print()`, rendered by the same `ResponseDocument` view that shows a response on screen. B (hand-written PDF bytes) is under "with more time". |
 | **Q-3** | Persist drafts while filling? | **Resolved (D-23):** yes, because we don't want to lose data. Drafts are saved on first input, autosaved, and listed under In progress so they can be resumed. |
 | **Q-4** | Condition targets: any field, or only fields above? | Any field except itself, with cycle prevention. "Only fields above" removes cycles by construction, but reordering can then invalidate conditions. |
 | **Q-5** | Library set | **Resolved (v0.1):** react-router, zod and @dnd-kit, with no state or UI library and CSS Modules for styling (ADRs 0001–0006). |

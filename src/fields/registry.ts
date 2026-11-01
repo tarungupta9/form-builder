@@ -10,7 +10,11 @@ export const fieldRegistry: { readonly [K in FieldType]: FieldDefinition<K> } = 
   text: textDefinition,
 };
 
-/** Palette order. */
+/**
+ * Palette order, which is the key order above. New types go in this order, the same as
+ * `FieldTypeMap`: text, textarea, number, date, singleSelect, multiSelect, section, then file
+ * and calculation. A flat list for now; grouping the palette would be a change to the palette.
+ */
 export const FIELD_TYPES = Object.keys(fieldRegistry) as FieldType[];
 
 /** The definition for a field of any type (see the note on method syntax in `contract.ts`). */

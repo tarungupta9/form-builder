@@ -19,3 +19,25 @@
   overflow-wrap: anywhere;
   font-size: 14px;
 }
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 72ch;
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border-left: 4px solid var(--color-danger);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.noticeTitle {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.notice code {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}

@@ -73,10 +73,14 @@ export function isoDate(raw: string): IsoDate {
   return parsed;
 }
 
-/** A submitted response to `form`, answered with `answers`, snapshotting every field. */
+/**
+ * A submitted response to `form`, answered with `answers`, snapshotting every field.
+ * `overrides` sets anything else a scenario depends on, such as when it was submitted.
+ */
 export const submittedResponse = (
   form: FormTemplate,
   answers: ResponseValues = {},
+  overrides: Partial<SubmittedResponse> = {},
 ): SubmittedResponse => {
   const at = toIsoDateTime(new Date('2026-11-01T09:30:00Z'));
   return {
@@ -85,7 +89,9 @@ export const submittedResponse = (
     templateId: form.id,
     createdAt: at,
     submittedAt: at,
-    snapshot: { title: form.title, description: form.description, fields: form.fields },
+    // A copy, as at submit, so editing the template afterwards leaves the snapshot alone.
+    snapshot: { title: form.title, description: form.description, fields: [...form.fields] },
     answers,
+    ...overrides,
   };
 };

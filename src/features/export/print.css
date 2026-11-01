@@ -1,0 +1,58 @@
+/*
+ * Print-only rules for the response document, loaded into the print frame and nowhere else
+ * (printDocument.ts). The frame holds nothing but the document, so element selectors are safe
+ * here, and they keep working when CSS Modules renames the document's own classes.
+ */
+
+@page {
+  size: A4;
+  margin: 18mm 16mm 20mm;
+
+  /* Page numbers. Chromium supports margin boxes; where a browser ignores them, its own
+     "Headers and footers" print option adds page numbers instead (README, known trade-offs). */
+  @bottom-center {
+    content: 'Page ' counter(page) ' of ' counter(pages);
+    font-family: Archivo, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9pt;
+    color: #444;
+  }
+}
+
+/* Print in black on white; screen tints and shadows are noise on paper. */
+:root {
+  --color-text: #000;
+  --color-text-secondary: #000;
+  --color-text-muted: #444;
+  --color-answer: #000;
+  --color-surface: #fff;
+  --color-border-soft: #bbb;
+}
+
+html,
+body {
+  min-height: 0;
+  margin: 0;
+  background: #fff;
+  font-size: 11pt;
+  line-height: 1.45;
+}
+
+article {
+  max-width: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Keep a label with its answer, and a heading with what follows it. */
+article dl > div {
+  break-inside: avoid;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  break-after: avoid;
+}

@@ -16,7 +16,15 @@ import {
   parseTemplateId,
 } from './ids';
 import type { FieldValue, FileMeta } from './response';
-import type { Condition, ConditionGroup, InputFieldLogic, Predicate } from './template';
+import type {
+  Condition,
+  ConditionGroup,
+  Decimals,
+  FieldLogic,
+  InputFieldLogic,
+  Option,
+  Predicate,
+} from './template';
 
 /** A string schema that only yields a branded value when `parse` accepts it. */
 function branded<B>(parse: (raw: string) => B | null, name: string) {
@@ -40,6 +48,18 @@ export const isoDateTimeSchema = branded(parseIsoDateTime, 'timestamp');
 
 const count = z.number().int().nonnegative();
 export const optionalCount = count.optional();
+
+/** How many decimal places a Number (v0.4) or a calculation (v0.9) shows and accepts. */
+export const decimalsSchema: z.ZodType<Decimals> = z.union([
+  z.literal(0),
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+]);
+
+/** One choice of a single or multi select (v0.5). Answers store its ID, never its label (D-11). */
+export const optionSchema: z.ZodType<Option> = z.object({ id: optionIdSchema, label: z.string() });
 
 const nullableNumber = z.number().nullable();
 
@@ -87,14 +107,22 @@ export const conditionGroupSchema: z.ZodType<ConditionGroup> = z.object({
   conditions: z.array(conditionSchema),
 });
 
-export const inputFieldLogicSchema: z.ZodType<InputFieldLogic> = z.object({
+/**
+ * Every field can be shown or hidden. Display-only fields (section header, calculation) use
+ * this schema as it is; fields that take an answer extend it with the required axis, so the
+ * two cannot drift apart.
+ */
+export const fieldLogicSchema = z.object({
   defaultVisible: z.boolean(),
   show: conditionGroupSchema,
   hide: conditionGroupSchema,
+}) satisfies z.ZodType<FieldLogic>;
+
+export const inputFieldLogicSchema = fieldLogicSchema.extend({
   defaultRequired: z.boolean(),
   require: conditionGroupSchema,
   unrequire: conditionGroupSchema,
-});
+}) satisfies z.ZodType<InputFieldLogic>;
 
 export const fileMetaSchema: z.ZodType<FileMeta> = z.object({
   name: z.string(),

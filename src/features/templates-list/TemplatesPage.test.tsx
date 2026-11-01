@@ -37,6 +37,17 @@ describe('Templates page', () => {
     ).toHaveAttribute('href', `/templates/${saved.id}/edit`);
   });
 
+  it('links each card to its responses page, even before it has any', async () => {
+    const saved = template([textField('Name')], 'Expense claim');
+    createRepositories(localStorage).templates.put(saved);
+
+    renderApp('/');
+
+    expect(
+      await screen.findByRole('link', { name: /^View responses\s*: Expense claim$/ }),
+    ).toHaveAttribute('href', `/templates/${saved.id}/responses`);
+  });
+
   it('lists the most recently edited template first', async () => {
     const repositories = createRepositories(localStorage);
     const older = { ...template([], 'Older'), updatedAt: toIsoDateTime(new Date('2026-10-01')) };
@@ -62,6 +73,41 @@ describe('Templates page', () => {
     expect(screen.getByText(backupKey)).toBeInTheDocument();
     expect(localStorage.getItem(STORAGE_KEYS.templates)).toBe('{bad');
     expect(localStorage.getItem(backupKey)).toBe('{bad');
+  });
+
+  it('lists the readable templates and says how many were set aside, naming the backup key', async () => {
+    const good = template([textField('Name')], 'Expense claim');
+    const raw = JSON.stringify({
+      schemaVersion: 1,
+      items: { [good.id]: good, broken: { title: 7 } },
+    });
+    localStorage.setItem(STORAGE_KEYS.templates, raw);
+
+    renderApp('/');
+
+    expect(await screen.findByRole('heading', { name: 'Expense claim' })).toBeVisible();
+    const notice = screen.getByRole('region', { name: '1 saved template could not be read' });
+    const backupKey = Object.keys(localStorage).find((key) => key.startsWith(QUARANTINE_PREFIX))!;
+    expect(within(notice).getByText(backupKey)).toBeVisible();
+    expect(localStorage.getItem(backupKey)).toBe(raw);
+  });
+
+  it('says how many responses were set aside, and still counts the readable ones', async () => {
+    const claim = template([textField('Name')], 'Expense claim');
+    const kept = submittedResponse(claim);
+    createRepositories(localStorage).templates.put(claim);
+    localStorage.setItem(
+      STORAGE_KEYS.responses,
+      JSON.stringify({ schemaVersion: 1, items: { [kept.id]: kept, a: null, b: 'x' } }),
+    );
+
+    renderApp('/');
+
+    expect(
+      await screen.findByRole('region', { name: '2 saved responses could not be read' }),
+    ).toBeVisible();
+    const card = within(screen.getByRole('heading', { name: 'Expense claim' }).closest('li')!);
+    expect(card.getByText('1 response')).toBeVisible();
   });
 
   it('starts again with an empty list once the corrupt data is backed up, keeping the backup', async () => {

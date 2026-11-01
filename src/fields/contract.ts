@@ -4,8 +4,8 @@
  * (pure) and `FieldUi` (React), registered in `registry.ts` and `ui-registry.ts`.
  *
  * The contract grows with the app, one capability per slice: v0.1 covered what the builder and
- * storage need, v0.2 adds filling in and validating answers. Exporting arrives in v0.3 as new
- * members, which every registered type must then implement.
+ * storage need, v0.2 added filling in and validating answers, and v0.3 adds `toExport`, how a
+ * field reads in the PDF and the on-screen record of a submitted response.
  *
  * Methods are declared with method syntax on purpose. TypeScript checks method parameters
  * bivariantly, which lets `FieldDefinition<'text'>` be used where `FieldDefinition<FieldType>` is
@@ -23,6 +23,28 @@ import type { IconName } from '../ui/icons';
 export interface TemplateContext {
   fields: readonly Field[];
 }
+
+/**
+ * How one answer reads in an export, whatever its field type. This is a closed set of
+ * presentation shapes, not of field types: every type maps its value onto one of them inside
+ * its own plugin, so the export view never needs to learn about a new type (ADR 0011).
+ */
+export type ExportValue =
+  /** No answer. Reads "Not answered" unless `text` gives a better phrase ("Nothing to calculate"). */
+  | { kind: 'empty'; text?: string }
+  /** Shown with its line breaks kept, so long text needs no flag of its own. */
+  | { kind: 'text'; text: string }
+  /** A bulleted list: multi-select labels (v0.5), file metadata lines (v0.9). */
+  | { kind: 'list'; items: string[] };
+
+/** `h2` to `h6`: the form title is the document's only `h1` (D-18). */
+export type HeadingLevel = 2 | 3 | 4 | 5 | 6;
+
+/** One row of an exported document: a section heading or a labelled answer. */
+export type ExportBlock =
+  | { kind: 'section'; text: string; level: HeadingLevel }
+  /** `note` is the plugin's caveat about this answer, shown under it (the file-contents footnote). */
+  | { kind: 'answer'; label: string; value: ExportValue; note?: string };
 
 export interface FieldDefinition<K extends FieldType> {
   type: K;
@@ -55,6 +77,13 @@ export interface FieldDefinition<K extends FieldType> {
     value: FieldValueOf<K> | undefined,
     required: boolean,
   ): string | null;
+
+  /**
+   * How the field reads in the export: the PDF and the on-screen record of a response. It is
+   * called once per field of a response's snapshot, with that field's stored answer, so it
+   * must not depend on the template as it is today (D-10).
+   */
+  toExport(field: FieldOf<K>, value: FieldValueOf<K> | undefined): ExportBlock;
 }
 
 export interface RendererProps<K extends FieldType> {

@@ -1,5 +1,5 @@
 import { type ReactNode, createContext, useContext, useSyncExternalStore } from 'react';
-import type { Collection, CollectionSnapshot } from './collection';
+import type { Collection, CollectionSnapshot, SetAside } from './collection';
 import type { Repositories } from './repositories';
 
 const RepositoriesContext = createContext<Repositories | null>(null);
@@ -28,4 +28,15 @@ export function useCollection<Id extends string, T>(
   collection: Collection<Id, T>,
 ): CollectionSnapshot<Id, T> {
   return useSyncExternalStore(collection.subscribe, collection.snapshot);
+}
+
+/** What the collection has set aside as unreadable in this tab, so a screen can say so. */
+export function useSetAside<Id extends string, T>(
+  collection: Collection<Id, T>,
+): readonly SetAside[] {
+  return useSyncExternalStore(collection.subscribe, () => {
+    // Items are set aside while the collection is read, so read it first.
+    collection.snapshot();
+    return collection.setAside();
+  });
 }

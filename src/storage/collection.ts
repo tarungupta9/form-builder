@@ -9,11 +9,19 @@ import { type Result, type StorageError, err, ok } from './result';
  *
  * Reads are parsed once and cached, so `snapshot()` is cheap and referentially stable (what
  * `useSyncExternalStore` needs). The cache is dropped on every write and whenever another tab
- * changes the key. Data that fails validation is copied to a quarantine key and reported, and
- * from then on writes are refused, so user data is never silently overwritten or wiped.
+ * changes the key. Nothing is ever silently overwritten or wiped (ADR 0012):
+ *
+ * - An item that fails validation is **set aside**: the stored value is first copied to a
+ *   quarantine key, then the item is dropped from the collection, and the valid items load.
+ *   `setAside()` reports how many and where the copy is, so the screen can say so.
+ * - A key that cannot be read at all (not JSON, no envelope), or whose bad items cannot be
+ *   backed up, is copied to a quarantine key if possible and reported as an error, and writes
+ *   are refused, because writing would destroy the only copy.
  */
 export interface Collection<Id extends string, T> {
   snapshot: () => CollectionSnapshot<Id, T>;
+  /** Every time this tab set unreadable items aside, oldest first. Stable until the next one. */
+  setAside: () => readonly SetAside[];
   put: (item: T) => Result<void, StorageError>;
   remove: (ids: readonly Id[]) => Result<void, StorageError>;
   /** Starts over with an empty collection. Only offered after the old data has been backed up. */
@@ -22,6 +30,13 @@ export interface Collection<Id extends string, T> {
 }
 
 export type CollectionSnapshot<Id extends string, T> = Result<ReadonlyMap<Id, T>, StorageError>;
+
+/** Items that failed validation and were moved out of the collection, and where their copy is. */
+export interface SetAside {
+  count: number;
+  /** Holds the key's whole stored value from before the items were removed. */
+  backupKey: string;
+}
 
 interface CollectionOptions<Id extends string, T> {
   storage: Storage | null;
@@ -38,9 +53,11 @@ export function createCollection<Id extends string, T>(
   options: CollectionOptions<Id, T>,
 ): Collection<Id, T> {
   const { storage, key, itemSchema, idOf, now = () => new Date() } = options;
-  const envelopeSchema = z.object({ items: z.record(z.string(), itemSchema) });
+  // Items are checked one by one below, so one bad item never hides the others.
+  const envelopeSchema = z.object({ items: z.record(z.string(), z.unknown()) });
   const listeners = new Set<() => void>();
   let cached: CollectionSnapshot<Id, T> | null = null;
+  let setAsideLog: readonly SetAside[] = [];
 
   const notify = () => {
     cached = null;
@@ -85,11 +102,23 @@ export function createCollection<Id extends string, T>(
     const parsed = envelopeSchema.safeParse(migrated.envelope);
     if (!parsed.success) return corrupt();
     const items = new Map<Id, T>();
-    for (const [storedKey, item] of Object.entries(parsed.data.items)) {
+    let rejected = 0;
+    for (const [storedKey, stored] of Object.entries(parsed.data.items)) {
+      const item = itemSchema.safeParse(stored);
       // A record whose key disagrees with its own ID would be unreachable by lookup.
-      if (idOf(item) !== storedKey) return corrupt();
-      items.set(idOf(item), item);
+      if (item.success && idOf(item.data) === storedKey) items.set(idOf(item.data), item.data);
+      else rejected += 1;
     }
+    if (rejected === 0) return ok(items);
+
+    // Copy first, then drop: if the copy cannot be made, nothing may be removed.
+    const backupKey = quarantine(raw);
+    if (backupKey === null) return err({ kind: 'corrupt', key, backupKey: null });
+    setAsideLog = [...setAsideLog, { count: rejected, backupKey }];
+    // Store the valid items alone, so the next read (or another tab) does not set them aside again.
+    // If this write fails, the next successful write drops them instead; the copy exists either way.
+    // No `notify()`: this runs while a snapshot is being read, and the cache below is current.
+    writeItems(items);
     return ok(items);
   };
 
@@ -98,7 +127,7 @@ export function createCollection<Id extends string, T>(
     return cached;
   };
 
-  const write = (items: ReadonlyMap<Id, T>): Result<void, StorageError> => {
+  function writeItems(items: ReadonlyMap<Id, T>): Result<void, StorageError> {
     if (!storage) return err({ kind: 'unavailable' });
     const envelope = { schemaVersion: CURRENT_SCHEMA_VERSION, items: Object.fromEntries(items) };
     try {
@@ -106,8 +135,13 @@ export function createCollection<Id extends string, T>(
     } catch (error) {
       return err(isQuotaError(error) ? { kind: 'quota' } : { kind: 'unavailable' });
     }
-    notify();
     return ok(undefined);
+  }
+
+  const write = (items: ReadonlyMap<Id, T>): Result<void, StorageError> => {
+    const written = writeItems(items);
+    if (written.ok) notify();
+    return written;
   };
 
   const update = (change: (items: Map<Id, T>) => void): Result<void, StorageError> => {
@@ -127,6 +161,7 @@ export function createCollection<Id extends string, T>(
 
   return {
     snapshot,
+    setAside: () => setAsideLog,
     put: (item) =>
       update((items) => {
         items.set(idOf(item), item);

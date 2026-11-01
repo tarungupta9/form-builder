@@ -66,7 +66,7 @@ function FieldSettings({
         <Setting
           id={CONFIG_IDS.fieldLabel}
           label="Label"
-          hint="What respondents read above the field."
+          hint="What respondents see."
           error={showIssues && fieldIssues.includes(LABEL_MISSING) ? LABEL_MISSING : null}
         >
           {(control) => (
