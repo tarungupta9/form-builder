@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -35,6 +36,15 @@ export function LiveRegionProvider({ children }: { children: ReactNode }) {
       pending.current = [];
     }, BATCH_MS);
   }, []);
+
+  // A message still waiting when the app goes away (a route change in tests, a closed tab) is
+  // dropped, so the timer never fires into a torn-down page.
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
 
   const value = useMemo(() => announce, [announce]);
 

@@ -7,6 +7,7 @@ import {
   text,
   textField,
 } from '../test/fixtures';
+import { newTemplateId } from '../domain/ids';
 import type { FormTemplate } from '../domain/template';
 import { QUARANTINE_PREFIX } from './collection';
 import { STORAGE_KEYS, createRepositories } from './repositories';
@@ -94,7 +95,8 @@ describe('template storage', () => {
     it('sets aside an item stored under a key that is not its own ID', () => {
       const good = template([], 'Good');
       const misfiled = template([], 'Misfiled');
-      storeRaw(STORAGE_KEYS.templates, { [good.id]: good, [good.id.replace(/.$/, '0')]: misfiled });
+      // A fresh ID, so the wrong key can never coincide with the good item's own.
+      storeRaw(STORAGE_KEYS.templates, { [good.id]: good, [newTemplateId()]: misfiled });
 
       const repos = repositories();
       const snapshot = repos.templates.snapshot();
