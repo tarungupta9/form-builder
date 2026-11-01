@@ -1,0 +1,49 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* A red bar beside the whole field, as well as the message, so the error is not colour alone. */
+.invalid {
+  border-left: 4px solid var(--color-danger);
+  padding-left: var(--space-3);
+}
+
+.label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-3);
+  padding: 0;
+  font-weight: 600;
+}
+
+.fieldset > .label {
+  margin-bottom: var(--space-2);
+}
+
+.required {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.hint {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-muted);
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 15px;
+  font-weight: 600;
+}

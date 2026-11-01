@@ -1,0 +1,7 @@
+dist
+coverage
+node_modules
+package-lock.json
+# Hand-written docs keep their own formatting.
+docs/spec.md
+docs/high-level-design.md

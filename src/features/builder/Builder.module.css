@@ -1,0 +1,216 @@
+/* Palette | canvas | config on wide screens; one column, in that order, on narrow ones. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(280px, 380px);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.palette,
+.canvas,
+.config {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.panelTitle {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.saveState {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-muted);
+}
+
+/* Heading: the description under the template's title. */
+
+.templateDescription {
+  max-width: 70ch;
+  overflow-wrap: anywhere;
+  color: var(--color-text-secondary);
+}
+
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* Palette */
+
+.paletteList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.paletteButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--target-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.paletteButton:hover {
+  background: var(--color-tint);
+}
+
+/* Canvas */
+
+.canvasEmpty {
+  padding: var(--space-6);
+  border: 1px dashed var(--color-border-dashed);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+}
+
+.canvasList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.canvasItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.canvasSelect {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  text-align: left;
+  cursor: pointer;
+}
+
+.canvasSelect:hover {
+  background: var(--color-tint);
+}
+
+/* Selection is shown by the left bar and the tint, not by colour of text alone. */
+.canvasSelect[aria-pressed='true'] {
+  border-left-color: var(--color-primary);
+  background: var(--color-tint-strong);
+}
+
+.canvasLabel {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.canvasSummary {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-muted);
+}
+
+.canvasTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.canvasTags:empty {
+  display: none;
+}
+
+.requiredTag {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.issueTag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+/* Config panel */
+
+.configEmpty {
+  color: var(--color-text-muted);
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Save feedback */
+
+.issueSummary,
+.storageAlert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  padding: var(--space-5);
+  border: 3px solid var(--color-danger);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.issueTitle {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.issueList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-5);
+}
+
+.issueLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-danger);
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}

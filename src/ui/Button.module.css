@@ -1,0 +1,125 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 20px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button:disabled,
+.button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sm {
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  font-size: 15px;
+}
+
+.lg {
+  min-height: 48px;
+  padding: 0 var(--space-6);
+  font-size: 17px;
+}
+
+.primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  color: var(--color-on-primary);
+}
+
+.secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border-accent);
+  color: var(--color-primary);
+}
+
+.secondary:hover:not(:disabled),
+.quiet:hover:not(:disabled),
+.dashed:hover:not(:disabled) {
+  background: var(--color-tint);
+  color: var(--color-primary);
+}
+
+.quiet {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.dashed {
+  align-self: flex-start;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border-dashed);
+  color: var(--color-primary);
+}
+
+.danger {
+  background: var(--color-danger);
+  color: var(--color-on-primary);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--color-danger-hover);
+  color: var(--color-on-primary);
+}
+
+.dangerQuiet {
+  background: transparent;
+  color: var(--color-danger);
+}
+
+.dangerQuiet:hover:not(:disabled) {
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
+}
+
+.spinner {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 32px, above the 24px minimum of WCAG 2.5.8. */
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--color-tint-strong);
+  color: var(--color-primary);
+}
+
+.iconButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
