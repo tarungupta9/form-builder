@@ -20,3 +20,9 @@ The significant prompts sent to an AI tool (Claude Code), what was checked befor
 
 - **Prompt:** Evaluate showing a preview while the user builds the form, instead of only through the _Preview_ modal.
 - **Rejected:** The AI proposed drawing every canvas item with its real field renderer, plus an inline Edit | Preview toggle in place of the modal. The spec allows an inline preview, but this would change the canvas's accessibility model (inputs cannot sit inside a selectable button, so the preview would need `inert` and a separate select control) and its rendering cost. It adds scope without serving any evaluation criterion. **Decision:** keep the original design: compact canvas summaries and _Preview_ in a modal, as the spec describes.
+
+## 4. `aria-invalid` on radio buttons
+
+- **Prompt:** Build single select's radio, dropdown and tile displays so that selection and required validation behave identically (an AGENTS.md invariant). The kickoff brief asked for the same `required` / `aria-invalid` markup on every control.
+- **Verified before use:** The parameterised parity test (`src/fields/single-select/displayParity.test.tsx`) checks that the error text, the focus target and the stored value match across the three displays. `jsx-a11y` lint and a manual VoiceOver check confirmed how each display reports the error.
+- **Plausible but incorrect, and changed:** Putting `aria-invalid` on each radio looks like the consistent choice. But ARIA defines no invalid state on a single `radio`, the `jsx-a11y/role-supports-aria-props` rule rejects it, and assistive tech reads the error from the group. **Change:** every control in all three displays carries native `required`. The radio and tile groups carry the error in the group's description, and the dropdown keeps `aria-invalid` with its own description. Parity is in the behaviour and the announced message, not in identical attributes.
