@@ -1,5 +1,5 @@
 import type { ConditionId, FieldId, IsoDate, IsoDateTime, OptionId, TemplateId } from './ids';
-import type { DateValue, NumberValue, TextValue } from './response';
+import type { ChoiceValue, DateValue, MultiValue, NumberValue, TextValue } from './response';
 
 export interface FormTemplate {
   id: TemplateId;
@@ -113,6 +113,22 @@ export interface DateConfig {
   maxDate?: IsoDate;
 }
 
+/** Three looks for one control: they share the value and the validation (HLD §7). */
+export type SingleSelectDisplay = 'radio' | 'dropdown' | 'tiles';
+
+export interface SingleSelectConfig {
+  /** Array order is the order respondents see. */
+  options: Option[];
+  display: SingleSelectDisplay;
+}
+
+export interface MultiSelectConfig {
+  options: Option[];
+  /** Applies once something is ticked; `0` or unset means no minimum. */
+  minSelections?: number;
+  maxSelections?: number;
+}
+
 /** XL to XS, which are heading levels `h2` to `h6` (D-18). */
 export type SectionSize = 'xl' | 'lg' | 'md' | 'sm' | 'xs';
 
@@ -138,6 +154,8 @@ export interface FieldTypeMap {
   textarea: { config: TextareaConfig; value: TextValue; logic: InputFieldLogic };
   number: { config: NumberConfig; value: NumberValue; logic: InputFieldLogic };
   date: { config: DateConfig; value: DateValue; logic: InputFieldLogic };
+  singleSelect: { config: SingleSelectConfig; value: ChoiceValue; logic: InputFieldLogic };
+  multiSelect: { config: MultiSelectConfig; value: MultiValue; logic: InputFieldLogic };
   /** Display only: it holds no value (`never`) and has no required axis. */
   section: { config: SectionConfig; value: never; logic: FieldLogic };
 }

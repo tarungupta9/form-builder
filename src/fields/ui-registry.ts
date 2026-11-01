@@ -14,12 +14,18 @@ import { TextEditor } from './text/TextEditor';
 import { TextRenderer } from './text/TextRenderer';
 import { TextareaEditor } from './textarea/TextareaEditor';
 import { TextareaRenderer } from './textarea/TextareaRenderer';
+import { SingleSelectEditor } from './single-select/SingleSelectEditor';
+import { SingleSelectRenderer } from './single-select/SingleSelectRenderer';
+import { MultiSelectEditor } from './multi-select/MultiSelectEditor';
+import { MultiSelectRenderer } from './multi-select/MultiSelectRenderer';
 
 export const fieldUi: { readonly [K in FieldType]: FieldUi<K> } = {
   text: { Editor: TextEditor, Renderer: TextRenderer },
   textarea: { Editor: TextareaEditor, Renderer: TextareaRenderer },
   number: { Editor: NumberEditor, Renderer: NumberRenderer },
   date: { Editor: DateEditor, Renderer: DateRenderer },
+  singleSelect: { Editor: SingleSelectEditor, Renderer: SingleSelectRenderer },
+  multiSelect: { Editor: MultiSelectEditor, Renderer: MultiSelectRenderer },
   section: { Editor: SectionEditor, Renderer: SectionRenderer },
 };
 

@@ -1,0 +1,58 @@
+.group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.options {
+  display: flex;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.option {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.option + .option {
+  border-left: 1px solid var(--color-border-control);
+}
+
+/* The native radio stays in the tab order and the accessibility tree; only its dot is hidden. */
+.option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.option:has(input:checked) {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.option:has(input:focus-visible) {
+  outline: var(--focus-outline);
+  outline-offset: -3px;
+  box-shadow: inset var(--focus-ring);
+}

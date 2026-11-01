@@ -8,12 +8,14 @@ import {
   type OptionId,
   newConditionId,
   newFieldId,
+  newOptionId,
   newResponseId,
   newTemplateId,
   parseIsoDate,
   toIsoDateTime,
 } from '../domain/ids';
 import type {
+  ChoiceValue,
   DateValue,
   MultiValue,
   NumberValue,
@@ -26,6 +28,7 @@ import {
   type ConditionGroup,
   type FieldOf,
   type FormTemplate,
+  type Option,
   type Predicate,
   defaultFieldLogic,
   defaultInputLogic,
@@ -51,6 +54,34 @@ export const textareaField = (
   type: 'textarea',
   label,
   config: { placeholder: '', rows: 4 },
+  logic: defaultInputLogic(),
+  ...overrides,
+});
+
+/** Options with fresh IDs, one per label, in the order given. */
+export const options = (...labels: string[]): Option[] =>
+  labels.map((label) => ({ id: newOptionId(), label }));
+
+export const singleSelectField = (
+  label = 'Payment method',
+  overrides: Partial<FieldOf<'singleSelect'>> = {},
+): FieldOf<'singleSelect'> => ({
+  id: newFieldId(),
+  type: 'singleSelect',
+  label,
+  config: { options: options('Card', 'Cash', 'Invoice'), display: 'radio' },
+  logic: defaultInputLogic(),
+  ...overrides,
+});
+
+export const multiSelectField = (
+  label = 'Expense types',
+  overrides: Partial<FieldOf<'multiSelect'>> = {},
+): FieldOf<'multiSelect'> => ({
+  id: newFieldId(),
+  type: 'multiSelect',
+  label,
+  config: { options: options('Travel', 'Meals', 'Lodging', 'Other') },
   logic: defaultInputLogic(),
   ...overrides,
 });
@@ -110,6 +141,7 @@ export const template = (fields: FormTemplate['fields'], title = 'Expense claim'
 // Values, as a renderer would produce them.
 export const text = (value: string): TextValue => ({ kind: 'text', value });
 export const num = (input: string): NumberValue => ({ kind: 'number', input });
+export const choice = (value: OptionId | null): ChoiceValue => ({ kind: 'choice', value });
 export const multi = (...value: OptionId[]): MultiValue => ({ kind: 'multi', value });
 export const date = (raw: string): DateValue => ({ kind: 'date', value: isoDate(raw) });
 

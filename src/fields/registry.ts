@@ -9,12 +9,16 @@ import { numberDefinition } from './number/definition';
 import { sectionDefinition } from './section/definition';
 import { textDefinition } from './text/definition';
 import { textareaDefinition } from './textarea/definition';
+import { singleSelectDefinition } from './single-select/definition';
+import { multiSelectDefinition } from './multi-select/definition';
 
 export const fieldRegistry: { readonly [K in FieldType]: FieldDefinition<K> } = {
   text: textDefinition,
   textarea: textareaDefinition,
   number: numberDefinition,
   date: dateDefinition,
+  singleSelect: singleSelectDefinition,
+  multiSelect: multiSelectDefinition,
   section: sectionDefinition,
 };
 
