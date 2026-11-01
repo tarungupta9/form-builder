@@ -1,8 +1,8 @@
 # Implementation Plan — Verified Slices
 
-- **Status:** Agreed. v0.1 signed off; v0.2 is next (see the [tracker](#6-progress-tracker)).
+- **Status:** Agreed. v0.1 and v0.2 signed off; v0.3 is next (see the [tracker](#6-progress-tracker)).
 - **Date:** 2026-11-01
-- **Replaces:** the layer-by-layer delivery plan in [high-level-design.md §10](high-level-design.md#10-delivery-plan-after-approval).
+- **Replaces:** the layer-by-layer delivery plan in [high-level-design.md §10](high-level-design.md#10-delivery-plan).
 
 This plan builds the design in [`high-level-design.md`](high-level-design.md) as a sequence of thin **end-to-end slices**. Each slice is a version of the app that runs in the browser and cuts through every layer it needs: storage, domain, field plugins and screens. Each one ends at a **verification gate**. The next slice starts only after the owner signs off on the current one.
 
@@ -26,7 +26,7 @@ A slice proves that the layers fit, and the person who owns the assessment can c
 1. **One slice at a time, gated.** Work on slice _N + 1_ starts only after slice _N_ is signed off. Findings from a gate are fixed inside that slice, not carried forward.
 2. **The existing code is a parts bin.** It was moved out of the repo, unchanged, to `../parts-bin/src` (beside this checkout), because the type checker and linter read everything in `src/`. A slice copies in only the files it needs: it reviews each one, trims it to what the slice uses, adds the missing tests and commits it with the slice. The handover lists every adopted file so the review can tell new code from pre-existing code. The parts bin is deleted at v1.0.
 3. **The stored data shape is final from slice 1.** Templates are saved with their full `FieldLogic` (empty condition groups) and responses with their snapshot from the start. Later slices only add union members; they never change a stored shape. So no migrations are needed between slices, and test data created while verifying v0.2 still loads in v0.10.
-4. **The field union grows one type at a time.** v0.1 starts `FieldTypeMap` with `text` only. A slice that adds a type adds its folder, one line in each registry and one map entry. **That diff is the evidence for the extensibility claim** ([HLD §1.2](high-level-design.md#12-non-functional)). If a type slice has to edit shared Builder, Fill or export code, the gate fails and the seam is fixed in that slice.
+4. **The field union grows one type at a time.** v0.1 starts `FieldTypeMap` with `text` only. A slice that adds a type adds its folder, one line in each registry and one map entry. **That diff is the evidence for the extensibility claim** ([HLD §1.2](high-level-design.md#12-non-functional)). `npm run check:seam -- <previous tag>` lists it and fails on any file outside the seam; v0.4, v0.5 and the field-type half of v0.9 run it at their gate. If a type slice has to edit shared Builder, Fill or export code, the gate fails and the seam is fixed in that slice.
 5. **Trimming the union exposes seam leaks, and that is the point.** Known today: the card's field count compares against `'section'` (`domain/template.ts`); fixed in v0.1 by counting every field (D-19). The rules engine (`domain/rules/evaluate.ts`) and the storage invariants (`storage/schemas.ts`) special-case `'calculation'` and `'number'`. Each leak becomes a compile error in the slice that adopts the file (v0.1 or v0.2). It is fixed there, and if the fix changes the plugin contract it is recorded as a decision.
 6. **Docs ship with the decision.** ADRs, README sections and AI usage log entries are written in the slice that makes the decision, while the alternatives are fresh ([AGENTS.md](../AGENTS.md#decision-records)).
 
@@ -54,7 +54,7 @@ A slice proves that the layers fit, and the person who owns the assessment can c
 
 - [ ] `npm run check` (types, lint, tests) and `npm run build` pass.
 - [ ] Every use case listed for the slice has a test that goes red when the behaviour breaks.
-- [ ] The demo script passes in the browser, including after a full page refresh.
+- [ ] The demo script passes in the browser, including after a full page refresh. Where it can, it is also a flow test in `src/test/flows/`; VoiceOver and print checks stay manual.
 - [ ] New UI works by keyboard alone with a visible focus indicator, and has been checked once with VoiceOver.
 - [ ] Every data-driven view in the slice handles its empty, not-found and error states.
 - [ ] No debug logging, no commented-out code, and no adopted file the slice does not use.
@@ -72,9 +72,9 @@ A slice proves that the layers fit, and the person who owns the assessment can c
 | v0.3    | [Responses and PDF](#v03--responses-and-pdf)                                          | list submitted responses and download or re-download each one as a PDF                            | D-30 (Q-2)                                                      |
 | v0.4    | [Long text, number, date, section header](#v04--long-text-number-date-section-header) | use every non-choice input type, plus headings                                                    | D-15, D-16, D-18, D-19                                          |
 | v0.5    | [Choice fields](#v05--choice-fields)                                                  | use single select (radio, dropdown, tiles) and multi select                                       | D-11                                                            |
-| v0.6    | [Builder workflow](#v06--builder-workflow)                                            | reorder by drag, keyboard or buttons, preview, be warned about unsaved changes, delete a template | D-21, D-22, D-28                                                |
-| v0.7    | [Conditional visibility](#v07--conditional-visibility)                                | show and hide fields with _all_/_any_ conditions, chains included, live as they type              | D-1, D-2, D-4–D-9, Q-4                                          |
-| v0.8    | [Conditional required and safe editing](#v08--conditional-required-and-safe-editing)  | make fields required by condition, see conflict warnings, delete a referenced field safely        | D-2, D-3, D-12                                                  |
+| v0.6    | [Conditional visibility](#v06--conditional-visibility)                                | show and hide fields with _all_/_any_ conditions, chains included, live as they type              | D-1, D-2, D-4–D-9, Q-4                                          |
+| v0.7    | [Conditional required and safe editing](#v07--conditional-required-and-safe-editing)  | make fields required by condition, see conflict warnings, delete a referenced field safely        | D-2, D-3, D-12                                                  |
+| v0.8    | [Builder workflow](#v08--builder-workflow)                                            | reorder by drag, keyboard or buttons, preview, be warned about unsaved changes, delete a template | D-21, D-22, D-28                                                |
 | v0.9    | [Calculation and file upload](#v09--calculation-and-file-upload)                      | see live totals and averages, and attach files that export as metadata                            | D-14, D-17, calculation seam                                    |
 | v0.10   | [Drafts and resume](#v010--drafts-and-resume)                                         | leave a form halfway, resume it from _In progress_, or discard it                                 | D-23                                                            |
 | v1.0    | [Polish and submission](#v10--polish-and-submission)                                  | recover unsaved builder work; the submission docs are complete                                    | D-33                                                            |
@@ -99,7 +99,7 @@ Each slice lists its goal, what is in and out of scope, what it adopts from the 
 - Builder: the heading shows the template's title ("Untitled template" until it has one) with an edit button that opens a dialog for the title and description (ADR 0009); a palette with Short text; a canvas where fields can be added by click, selected and removed; and the config panel with the text editor (label, placeholder, min and max length, prefix and suffix, Required toggle). Config issues block _Save_. The first save replaces `/new` with the edit URL. Adding a field and saving are announced through the live region.
 - `FieldTypeMap` contains only `text`, and both registries have one entry.
 
-**Not yet:** other field types (v0.4, v0.5), reordering, preview, the unsaved-changes guard and template deletion (v0.6), conditions (v0.7).
+**Not yet:** other field types (v0.4, v0.5), conditions (v0.6, v0.7), reordering, preview, the unsaved-changes guard and template deletion (v0.8).
 
 **Adopts:** `domain/` (ids, template, response, schemas, values, assertNever), `storage/`, `fields/` (contract, both registries, `text/` and the shared helpers it uses), `ui/` (Button, FormField, Setting, Switch, LiveRegion, Dialog, icons), `styles/`, `test/` (setup, fixtures trimmed to text).
 
@@ -117,7 +117,7 @@ Each slice lists its goal, what is in and out of scope, what it adopts from the 
 **Demo script**
 
 1. `npm install && npm run dev`, then open the app. Expect the empty state: "Create your first template".
-2. _New template_. The heading reads "Untitled template". Press the pencil button beside it and enter the title "Expense claim" and a description; press Escape once to check the draft is discarded and focus returns to the pencil, then enter them again and press _Done_. The heading and description update. Add three Short text fields by clicking. Then Tab to the palette and press Enter: a field is added, focus moves to it, and VoiceOver announces it.
+2. _New template_. The heading reads "Untitled template". Press the pencil button beside it and enter the title "Expense claim" and a description; press Escape once to check the draft is discarded and focus returns to the pencil, then enter them again and press _Done_. The heading and description update. Add two Short text fields by clicking. Then Tab to the palette and press Enter to add the third: it is added, focus moves to it, and VoiceOver announces it.
 3. Select the second field. Label it "Employee name", turn Required on, and set the max length to 40. Set the min length to 50: Save is blocked and the issue is shown. Fix it.
 4. Save. The URL changes from `…/new` to `…/<id>/edit`. Refresh: everything is still there.
 5. Go home. The card shows the title, the description, "3 fields" and the last-modified date.
@@ -138,7 +138,7 @@ Each slice lists its goal, what is in and out of scope, what it adopts from the 
 - Submit builds a `SubmittedResponse` with the snapshot (D-10) and the answers of visible fields only, then shows a confirmation.
 - Cards show the response count. _New response_ is disabled, with the reason, for a template with no fields (D-20).
 
-**Adopts:** `domain/rules/` (graph, predicates, evaluate) with the calculation branch resolved per [ground rule 5](#2-ground-rules); `fields/text/TextRenderer`, `fields/shared/Adorned`.
+**Adopts:** `domain/rules/` (graph, predicates, evaluate, trimmed to what Fill uses, with the calculation branch removed per [ground rule 5](#2-ground-rules); v0.9 designs the seam for derived values), `domain/values.ts`, `fields/text/TextRenderer`, `fields/shared/Adorned` and `Answer.module.css`, the answer rules in `fields/shared/textRules.ts`, and the response schema and collection from `storage/`. The plugin contract gains `Renderer`, `readValue`, `initialValue` and `validateValue`.
 
 **Use cases to test**
 
@@ -151,7 +151,7 @@ Each slice lists its goal, what is in and out of scope, what it adopts from the 
 - does not validate a hidden required field (engine level, using a fixture with a hide condition)
 - leaves a hidden field's value out of the submitted record (fixture)
 
-The last two pin reviewer invariants before the condition editor exists. v0.7 pins them again through the UI.
+The last two pin reviewer invariants before the condition editor exists. v0.6 pins them again through the UI.
 
 **Demo script**
 
@@ -171,7 +171,7 @@ The last two pin reviewer invariants before the condition editor exists. v0.7 pi
 
 - `/templates/:templateId/responses`, showing the submitted responses newest first, with empty and not-found states.
 - _Download PDF_ after submit, and _Re-download PDF_ on each row.
-- `toExportModel` (pure), `PrintDocument`, and `printDocument` (a hidden iframe, the print stylesheet, page numbers in the footer, the file name from `document.title`). The button shows a busy state while the PDF is prepared.
+- `toExportModel` (pure), designed to render on screen as well as in print (v0.10 shows submitted responses with it), `PrintDocument`, and `printDocument` (a hidden iframe, the print stylesheet, page numbers in the footer, the file name from `document.title`). The button shows a busy state while the PDF is prepared.
 - `toExport` for the text plugin.
 
 **Use cases to test**
@@ -202,7 +202,7 @@ The last two pin reviewer invariants before the condition editor exists. v0.7 pi
 - **Date:** _Pre-fill today_ uses the local date (D-16). Min and max dates. The PDF uses a long locale format.
 - **Section header:** XL–XS map to `h2`–`h6` (D-18), with a hint when a header skips a level. Section headers count as fields on the card (D-19). They appear as sections in the PDF.
 
-**Gate addition:** `git diff --stat v0.3` touches only `fields/<type>/`, the two registries, `FieldTypeMap`, the test fixtures and the shared field helpers. Anything else is a seam leak, and it is fixed before sign-off.
+**Gate addition:** `npm run check:seam -- v0.3` passes: the diff touches only `fields/<type>/`, the two registries, `FieldTypeMap`, the test fixtures, the slice's flow test and the shared field helpers. Anything else is a seam leak, and it is fixed before sign-off. Its output goes in the handover as the extensibility evidence.
 
 **Use cases to test:** for each plugin, `validateConfig`, `validateValue` at its boundaries, and `toExport`. Each renderer is found by role and label. Plus:
 
@@ -237,38 +237,14 @@ The last two pin reviewer invariants before the condition editor exists. v0.7 pi
 
 **Docs:** a README row for D-11. An ADR for "tiles are native radios" if the reasoning goes beyond accessibility parity.
 
-### v0.6 — Builder workflow
-
-**Goal.** The builder supports real authoring: reordering, preview, protection against lost work, and template deletion.
-
-**In scope**
-
-- Reordering with `@dnd-kit/sortable`, using the keyboard sensor and spoken announcements, plus _Move up_ / _Move down_ buttons on every canvas item. Fields can also be dragged from the palette into the canvas.
-- _Preview_ in a native `<dialog>`, which renders the unsaved template and persists nothing.
-- The unsaved-changes guard, for in-app navigation and for closing the tab (D-21). A warning on save when another tab saved in the meantime.
-- Deleting a template, with a confirmation stating how many responses go with it (D-22).
-
-**Use cases to test**
-
-- moving a field keeps the selection (reducer)
-- _Move up_ is disabled on the first field
-- the preview shows unsaved edits, and submitting in the preview stores nothing
-- leaving with unsaved changes asks for confirmation
-- deleting a template removes its responses, and the confirmation states the count
-- saving after another tab saved shows a warning
-
-**Demo script:** reorder by keyboard alone (Space, then the arrow keys, then Space) and listen for the announcements. Reorder by mouse, then with the buttons. Open the preview and close it with Escape: focus returns to the trigger. Close the tab with unsaved edits: the browser asks to confirm. Delete a template that has responses.
-
-**Docs:** an ADR for drag and drop (D-28). README rows for D-21 and D-22. Confirm dnd-kit works with React 19 at kickoff.
-
-### v0.7 — Conditional visibility
+### v0.6 — Conditional visibility
 
 **Goal.** Fields show and hide by condition, chains included, live as the user types. This is the most heavily graded slice.
 
 **In scope**
 
 - The condition editor: a _show_ group and a _hide_ group per field, each read as a sentence: "Show this field when [all ▾] of these match". The target picker offers any field except the field itself (Q-4). Targets that would create a cycle are disabled, and the reason is shown. Types that cannot be targets are not offered. The operator and value inputs follow the target's predicate kind.
-- Live re-evaluation in Fill and in Preview. One batched announcement per change ("2 fields shown").
+- Live re-evaluation in Fill. Preview (v0.8) reuses the same form, so it gets this for free. One batched announcement per change ("2 fields shown").
 - Hidden values are kept in the draft but stripped from the submitted record and the PDF (D-9).
 - Performance work from HLD §8: the graph is memoised per template, and renderers are `React.memo`'d with stable callbacks.
 
@@ -295,7 +271,7 @@ The last two pin reviewer invariants before the condition editor exists. v0.7 pi
 
 **Docs:** an ADR for the conditional-logic semantics (D-1, D-2, D-4–D-9, Q-4). The README states the AND / OR rule, which the spec explicitly requires.
 
-### v0.8 — Conditional required and safe editing
+### v0.7 — Conditional required and safe editing
 
 **Goal.** Required state can depend on other answers, and editing a form never leaves a broken reference.
 
@@ -317,6 +293,30 @@ The last two pin reviewer invariants before the condition editor exists. v0.7 pi
 **Demo script:** add "Receipt number is required when Amount > 50" and submit with 60 and with 40. Delete _Amount_: the dialog names _Receipt number_, and its condition is gone afterwards.
 
 **Docs:** extend the conditional-logic ADR or add a new one. README rows for D-3 and D-12, and the option-deletion decision.
+
+### v0.8 — Builder workflow
+
+**Goal.** The builder supports real authoring: reordering, preview, protection against lost work, and template deletion.
+
+**In scope**
+
+- Reordering with `@dnd-kit/sortable`, using the keyboard sensor and spoken announcements, plus _Move up_ / _Move down_ buttons on every canvas item. Fields can also be dragged from the palette into the canvas.
+- _Preview_ in a native `<dialog>`, which renders the unsaved template and persists nothing.
+- The unsaved-changes guard, for in-app navigation and for closing the tab (D-21). A warning on save when another tab saved in the meantime.
+- Deleting a template, with a confirmation stating how many responses go with it (D-22).
+
+**Use cases to test**
+
+- moving a field keeps the selection (reducer)
+- _Move up_ is disabled on the first field
+- the preview shows unsaved edits, and submitting in the preview stores nothing
+- leaving with unsaved changes asks for confirmation
+- deleting a template removes its responses, and the confirmation states the count
+- saving after another tab saved shows a warning
+
+**Demo script:** reorder by keyboard alone (Space, then the arrow keys, then Space) and listen for the announcements. Reorder by mouse, then with the buttons. Open the preview and close it with Escape: focus returns to the trigger. Close the tab with unsaved edits: the browser asks to confirm. Delete a template that has responses.
+
+**Docs:** an ADR for drag and drop (D-28). README rows for D-21 and D-22. Confirm dnd-kit works with React 19 at kickoff.
 
 ### v0.9 — Calculation and file upload
 
@@ -346,7 +346,7 @@ The last two pin reviewer invariants before the condition editor exists. v0.7 pi
 
 **Goal.** No input is lost to a refresh or an interruption, and abandoned clicks leave nothing behind (D-23).
 
-**In scope:** a draft is created on the first input; a pre-filled date does not count. The URL is replaced with the draft's URL. Autosave is debounced and flushed on `pagehide` and `visibilitychange`. The responses page gets an _In progress_ section with _Resume_ and _Discard_ (with confirmation). Cards read "12 responses · 2 in progress". A resumed draft is evaluated against the current template, with a notice when the template has changed. A submitted response's URL opens read-only. Template deletion counts drafts.
+**In scope:** a draft is created on the first input; a pre-filled date does not count. The URL is replaced with the draft's URL. Autosave is debounced and flushed on `pagehide` and `visibilitychange`. The responses page gets an _In progress_ section with _Resume_ and _Discard_ (with confirmation). Cards read "12 responses · 2 in progress". A resumed draft is evaluated against the current template, with a notice when the template has changed. A submitted response's URL opens read-only, shown from the export model (v0.3), not from read-only renderers. Template deletion counts drafts.
 
 **Use cases to test:** the D-23 feature flows in [HLD §9](high-level-design.md#9-testing-strategy). Plus:
 
@@ -379,16 +379,18 @@ The last two pin reviewer invariants before the condition editor exists. v0.7 pi
 
 Update this table at each sign-off.
 
+**Reordered during v0.2 (owner's call):** the builder workflow slice moved from v0.6 to after the two rules-engine slices, which become v0.6 and v0.7. Conditional logic is the most heavily graded part of the assessment, so it should land while there is the most time left; reordering, preview and the unsaved-changes guard are workflow comfort that a reviewer weighs less. The versions were renumbered rather than keeping the old numbers out of order, because each one is a git tag and tags should read in the order they were made. Preview now arrives after conditions, so the visibility slice is demonstrated in Fill mode only.
+
 | Version | Slice                                   | Status      | Signed off | Notes                                          |
 | ------- | --------------------------------------- | ----------- | ---------- | ---------------------------------------------- |
 | v0.1    | Skeleton: list and builder              | Signed off  | 2026-11-01 | Adds D-34, D-35; revises D-19, D-32 (ADR 0009) |
-| v0.2    | Fill and submit                         | Not started | —          |                                                |
+| v0.2    | Fill and submit                         | Signed off  | 2026-11-01 | Adds ADR 0010; reorders v0.6–v0.8 (see above)  |
 | v0.3    | Responses and PDF                       | Not started | —          |                                                |
 | v0.4    | Long text, number, date, section header | Not started | —          |                                                |
 | v0.5    | Choice fields                           | Not started | —          |                                                |
-| v0.6    | Builder workflow                        | Not started | —          |                                                |
-| v0.7    | Conditional visibility                  | Not started | —          |                                                |
-| v0.8    | Conditional required and safe editing   | Not started | —          |                                                |
+| v0.6    | Conditional visibility                  | Not started | —          | Was v0.7                                       |
+| v0.7    | Conditional required and safe editing   | Not started | —          | Was v0.8                                       |
+| v0.8    | Builder workflow                        | Not started | —          | Was v0.6                                       |
 | v0.9    | Calculation and file upload             | Not started | —          |                                                |
 | v0.10   | Drafts and resume                       | Not started | —          |                                                |
 | v1.0    | Polish and submission                   | Not started | —          |                                                |

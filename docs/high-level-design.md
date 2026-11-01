@@ -1,6 +1,6 @@
 # Form Builder — High-Level Design
 
-- **Status:** Draft, in review. Q-1 and Q-3 are resolved. Implementation follows [`implementation-plan.md`](implementation-plan.md), slice by slice.
+- **Status:** Draft, in review. Q-1, Q-3 and Q-5 are resolved. Implementation follows [`implementation-plan.md`](implementation-plan.md), slice by slice.
 - **Date:** 2026-10-31 (updated 2026-11-01)
 - **Source:** _Form Builder — Frontend Take-Home Assignment_ (PDF)
 
@@ -39,7 +39,7 @@ This document sets out the shape of the system before any code is written: what 
 
 | Concern | Target | How the reviewer will check it |
 | --- | --- | --- |
-| Extensibility | Adding an 11th field type means adding **one folder and two registry lines**, with no other existing files edited. | "Can someone add an 11th field type without editing 6 existing files?" |
+| Extensibility | Adding an 11th field type means **one plugin folder, its config type and `FieldTypeMap` entry in `domain/template.ts`, and one line in each registry**. `npm run check:seam` fails on any other source file. This holds for a type whose value and condition operators reuse an existing kind (text, number, date, choice, multi, files); a new kind of value also edits the value and predicate unions (ADR 0008). | "Can someone add an 11th field type without editing 6 existing files?" |
 | Type safety | Strict TypeScript, no `any`. The types carry the design: discriminated unions, branded IDs, exhaustive switches. | "Do your types communicate the design, or are they decorative?" |
 | Rules correctness | Chained conditions, hidden-but-required fields, and real-time updates. | Explicitly called out in the evaluation criteria. |
 | Accessibility | WCAG 2.2 AA. Everything works by keyboard alone, and announcements go through a live region. | `AGENTS.md` |
@@ -102,19 +102,19 @@ The spec asks us to decide the ambiguous 10–20% ourselves and to document the 
 
 | Concern | Proposal | Main alternative | ADR |
 | --- | --- | --- | --- |
-| Build | Vite + React 19 + TypeScript (`strict`, `noUncheckedIndexedAccess`) | Next.js, which brings SSR we cannot use with `localStorage` | D-24 |
-| Routing | React Router (data router, `HashRouter`-style so it runs on any static host) | Hand-rolled view state, which breaks refresh and deep links | D-25 |
-| State | `useReducer` for the builder, a pure engine + `useMemo` for fill, `useSyncExternalStore` over the storage repositories | Zustand or Redux, whose global stores this app does not need | D-26 |
-| Boundary validation | `zod` schemas for everything read from `localStorage` | Hand-written type guards, which are verbose and drift from the types | D-27 |
-| Drag and drop | `@dnd-kit/sortable`, which has a keyboard sensor and screen-reader announcements, **plus** move up/down buttons | Native HTML5 DnD, which is not keyboard accessible | D-28 |
-| Styling | CSS Modules + design tokens as CSS custom properties | Tailwind, which gets noisy in JSX the reviewer has to read | D-29 |
-| PDF | Print-optimised document in a hidden iframe → `print()` **(Q-2)** | A hand-written PDF byte generator | D-30 |
-| Testing | Vitest + Testing Library + user-event + `vitest-axe`. One Playwright smoke test (optional). | Jest, which is slower and needs extra config under Vite | D-31 |
+| Build | Vite + React 19 + TypeScript (`strict`, `noUncheckedIndexedAccess`) | Next.js, which brings SSR we cannot use with `localStorage` | [0001](decisions/0001-vite-react-typescript-strict.md) (D-24) |
+| Routing | React Router (data router, `HashRouter`-style so it runs on any static host) | Hand-rolled view state, which breaks refresh and deep links | [0002](decisions/0002-hash-router.md) (D-25) |
+| State | `useReducer` for the builder, a pure engine + `useMemo` for fill, `useSyncExternalStore` over the storage repositories | Zustand or Redux, whose global stores this app does not need | [0003](decisions/0003-state-reducer-and-external-store.md) (D-26) |
+| Boundary validation | `zod` schemas for everything read from `localStorage` | Hand-written type guards, which are verbose and drift from the types | [0004](decisions/0004-zod-at-the-storage-boundary.md) (D-27) |
+| Drag and drop | `@dnd-kit/sortable`, which has a keyboard sensor and screen-reader announcements, **plus** move up/down buttons | Native HTML5 DnD, which is not keyboard accessible | D-28, ADR in v0.8 |
+| Styling | CSS Modules + design tokens as CSS custom properties | Tailwind, which gets noisy in JSX the reviewer has to read | [0005](decisions/0005-css-modules-and-tokens.md) (D-29) |
+| PDF | Print-optimised document in a hidden iframe → `print()` **(Q-2)** | A hand-written PDF byte generator | D-30, ADR in v0.3 |
+| Testing | Vitest + Testing Library + user-event, with `axe-core` run directly (`axe.run`; colour contrast is checked by hand, since jsdom does no layout). One Playwright smoke test (optional). | Jest, which is slower and needs extra config under Vite | [0006](decisions/0006-vitest-and-testing-library.md) (D-31) |
 | Lint | ESLint (`typescript-eslint` strict, `jsx-a11y`, `react-hooks`) + Prettier | — | — |
 
 ### 3.2 Layers
 
-Dependencies point **downward only**. The domain layer is plain TypeScript with no React, so the hardest logic (rules, calculations, validation) can be tested without rendering anything.
+Dependencies point **downward only**. The domain layer is plain TypeScript plus zod schemas, with no React, so the hardest logic (rules, calculations, validation) can be tested without rendering anything. Storage reads the **pure** field registry, never the UI registry: the stored-field schema is the join of every plugin's schema, and a response's answers are checked with each plugin's `readValue` (ADR 0008). `storage/StorageContext.tsx` is the one React file in storage, the hook that subscribes screens to collections.
 
 ```mermaid
 flowchart TD
@@ -146,37 +146,53 @@ flowchart TD
   Fields --> Domain
   Features --> Domain
   Storage --> Domain
+  Storage -- "pure registry only" --> Fields
 ```
 
 ### 3.3 Folder structure
 
 ```
 src/
-  app/                 router, AppShell, RouteErrorBoundary, NotFound
+  app/                 App (providers), routes, AppShell, RouteError, NotFound, navigation, usePageTitle
   domain/
-    ids.ts             branded ID types and factories
-    template.ts        FormTemplate, Field union, FieldLogic
-    response.ts        FormResponse, SubmittedAnswer
-    rules/             condition operators, dependency graph, evaluate()
-    calculation/       aggregate()
-    validation/        validateResponse(), ValidationIssue codes
+    ids.ts             branded ID types, factories and parsers
+    template.ts        FormTemplate, FieldTypeMap → Field union, FieldLogic, each type's config interface
+    response.ts        FieldValue, DraftResponse, SubmittedResponse, ResponseSnapshot
+    values.ts          parseDecimal, numberOf, isEmptyValue
+    schemas.ts         shared zod parts (IDs, predicates, logic, values); here because plugins build
+                       their schemas from them and must not import storage
+    rules/             predicates, dependency graph, evaluateForm()
+    calculation/       aggregate()                                             (v0.9)
+    assertNever.ts
   fields/
+    contract.ts        FieldDefinition and FieldUi
     registry.ts        pure registry: type → FieldDefinition
     ui-registry.ts     type → { Editor, Renderer }, exhaustively typed
-    text/              definition.ts, TextEditor.tsx, TextRenderer.tsx, *.test.ts(x)
-    textarea/ number/ date/ single-select/ multi-select/ file/ section-header/ calculation/
+    shared/            helpers used by several plugins (text rules, Adorned, length settings)
+    text/              definition.ts, TextEditor.tsx, TextRenderer.tsx, definition.test.ts
+    textarea/ number/ date/ section/                                       (v0.4)
+    single-select/ multi-select/                                           (v0.5)
+    calculation/ file/                                                     (v0.9)
   features/
-    templates-list/    TemplatesPage, TemplateCard, useTemplates
-    builder/           BuilderPage, builderReducer, FieldPalette, Canvas, ConfigPanel,
-                       ConditionEditor, PreviewDialog, useUnsavedChangesGuard
-    fill/              FillPage, FormRenderer, useFormRuntime, ErrorSummary
-    responses/         ResponsesPage, ResponseRow
-    export/            toExportModel(), PrintDocument, printDocument()
-  storage/             localStore.ts, templateRepository.ts, responseRepository.ts,
-                       schemas.ts, migrations.ts
-  ui/                  Button, IconButton, Dialog, TextInput, Select, Checkbox, Switch,
-                       FormField (label/hint/error wiring), LiveRegion, VisuallyHidden, EmptyState
-  styles/              tokens.css, reset.css, print.css
+    templates-list/    TemplatesPage, TemplateCard, useTemplates, useResponseCounts
+    builder/           BuilderPage, Builder, builderReducer, useBuilder, FieldPalette, Canvas,
+                       ConfigPanel, IssueSummary, TemplateDetailsDialog, configIssues;
+                       ConditionEditor (v0.6), PreviewDialog and useUnsavedChangesGuard (v0.8)
+    fill/              FillPage, ResponseSession, FillForm, notices, useFormRuntime, useSaveResponse,
+                       responseIssues (asks each plugin, so it sits above fields/, not in domain/),
+                       submission
+    storage-error/     StorageErrorPanel
+    responses/         ResponsesPage, ResponseRow                                (v0.3)
+    export/            toExportModel(), PrintDocument, printDocument()           (v0.3)
+  storage/             collection (one generic Collection per key), repositories, schemas,
+                       migrations, result, storageMessages, StorageContext
+  ui/                  Button (+ ButtonLink, IconButton), Dialog, ErrorSummary (+ FailureAlert),
+                       FormField, LiveRegion, PageHeader, Setting, Switch, format, icons,
+                       useFocusRequest
+  styles/              tokens.css, base.css; print.css (v0.3)
+  test/                setup, renderApp, fixtures, flows/ (each slice's demo script as a test)
+scripts/
+  check-seam.mjs       fails when a field-type slice edits a file outside the plugin seam
 ```
 
 ### 3.4 Routes
@@ -186,9 +202,9 @@ src/
 | `/` | Templates list | empty ("Create your first template"), storage error |
 | `/templates/new` | Builder with an unsaved blank template. After the first save, the URL is replaced with the edit URL. | — |
 | `/templates/:templateId/edit` | Builder | not found, storage error |
-| `/templates/:templateId/responses` | Responses list: in-progress drafts, then submitted responses | empty, not found |
-| `/templates/:templateId/respond` | Fill mode with an unsaved draft. On first input, the URL is replaced with the draft's URL (D-23). | not found, template has no fields |
-| `/templates/:templateId/responses/:responseId` | Fill mode for a saved draft (resume). A submitted response opens read-only. | not found, template deleted, template changed since the draft started |
+| `/templates/:templateId/responses` | Responses list: in-progress drafts, then submitted responses **(v0.3; drafts v0.10)** | empty, not found |
+| `/templates/:templateId/respond` | Fill mode with an unsaved draft. On first input, the URL is replaced with the draft's URL (D-23). | not found, template has no fields, storage error |
+| `/templates/:templateId/responses/:responseId` | Fill mode for a saved draft (resume). A submitted response opens read-only. **(v0.10)** | not found, template deleted, template changed since the draft started |
 | `*` | Not found | — |
 
 `localStorage` reads are synchronous, so these views never show a "loading" state. The async work that does show progress is PDF preparation, which gets a busy state on the button.
@@ -200,11 +216,13 @@ src/
 ### 4.1 Identity
 
 ```ts
-type Brand<T, B extends string> = T & { readonly __brand: B };
-type TemplateId = Brand<string, 'TemplateId'>;
-type FieldId    = Brand<string, 'FieldId'>;
-type OptionId   = Brand<string, 'OptionId'>;
-type ResponseId = Brand<string, 'ResponseId'>;
+declare const brand: unique symbol;               // exists only in the type checker
+type Brand<T, B extends string> = T & { readonly [brand]: B };
+type TemplateId  = Brand<string, 'TemplateId'>;
+type FieldId     = Brand<string, 'FieldId'>;
+type OptionId    = Brand<string, 'OptionId'>;
+type ConditionId = Brand<string, 'ConditionId'>;
+type ResponseId  = Brand<string, 'ResponseId'>;
 type IsoDate     = Brand<string, 'IsoDate'>;     // YYYY-MM-DD, local
 type IsoDateTime = Brand<string, 'IsoDateTime'>; // full ISO-8601, UTC
 ```
@@ -215,7 +233,7 @@ TypeScript compares types by shape, so `type FieldId = string` is only another n
 removeOption(field, condition.targetFieldId);   // without brands this compiles; with them it is a type error
 ```
 
-Branded values come only from code that can vouch for them: the factories in `ids.ts` (`crypto.randomUUID()` plus the module's one cast, and `toIsoDate(localDate)`), and zod's `.brand()` when reading `localStorage` or URL params. So a `:templateId` from the URL cannot be used until it has been parsed. Two bugs this rules out here: swapping a condition's `targetFieldId` with its `OptionId` value (both are UUIDs, so test fixtures would not notice), and passing `toISOString()` output (a UTC date-time) where a local `IsoDate` is expected, which is the off-by-one-day bug in D-16.
+Branded values come only from code that can vouch for them: the factories in `ids.ts` (`crypto.randomUUID()` plus the module's one cast, and `toIsoDate(localDate)`), and the `parse…` functions in `ids.ts`, which zod schemas call when reading `localStorage` and pages call on URL params. So a `:templateId` from the URL cannot be used until it has been parsed. Two bugs this rules out here: swapping a condition's `targetFieldId` with its `OptionId` value (both are UUIDs, so test fixtures would not notice), and passing `toISOString()` output (a UTC date-time) where a local `IsoDate` is expected, which is the off-by-one-day bug in D-16.
 
 ### 4.2 Template and fields
 
@@ -229,14 +247,6 @@ interface FormTemplate {
   fields: Field[];            // array order = form order
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
-}
-
-interface FieldBase<T extends string, C> {
-  id: FieldId;
-  type: T;
-  label: string;
-  config: C;
-  logic: FieldLogic;
 }
 
 // One group per effect, each with its own AND/OR (D-1).
@@ -259,21 +269,27 @@ interface InputFieldLogic extends FieldLogic {
   unrequire: ConditionGroup;
 }
 
-type TextField        = FieldBase<'text',     TextConfig>      & { logic: InputFieldLogic };
-type NumberField      = FieldBase<'number',   NumberConfig>    & { logic: InputFieldLogic };
-// ...one per type
-type SectionHeaderField = FieldBase<'section', { size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' }>;
-type CalculationField   = FieldBase<'calculation', {
-  sourceFieldIds: FieldId[];                   // validated: Number fields only
-  aggregation: 'sum' | 'average' | 'min' | 'max';
-  decimals: 0 | 1 | 2 | 3 | 4;
-}>;
-
-type Field = TextField | TextareaField | NumberField | DateField | SingleSelectField
-           | MultiSelectField | FileField | SectionHeaderField | CalculationField;
+// One entry per field type: its config, its value and which logic axes it has.
+// The union grows one entry per slice (v0.2 has `text` only).
+interface FieldTypeMap {
+  text:        { config: TextConfig;   value: TextValue;   logic: InputFieldLogic };
+  number:      { config: NumberConfig; value: NumberValue; logic: InputFieldLogic };   // v0.4
+  section:     { config: { size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' }; value: never; logic: FieldLogic };  // v0.4; display-only, shape settled then
+  calculation: { config: { sourceFieldIds: FieldId[];          // Number fields only
+                           aggregation: 'sum' | 'average' | 'min' | 'max';
+                           decimals: 0 | 1 | 2 | 3 | 4 };
+                 value: NumberValue; logic: FieldLogic };                               // v0.9
+  // ...one entry per type
+}
+type FieldType = keyof FieldTypeMap;
+type FieldOf<K extends FieldType> = K extends FieldType      // distributes over a union of K
+  ? { id: FieldId; type: K; label: string; config: FieldTypeMap[K]['config']; logic: FieldTypeMap[K]['logic'] }
+  : never;
+type Field = FieldOf<FieldType>;
+type FieldValueOf<K extends FieldType> = FieldTypeMap[K]['value'];
 ```
 
-Representative configs:
+Representative configs. Each lives in `domain/template.ts` beside `FieldTypeMap`, because the domain layer cannot import from `fields/`:
 
 ```ts
 interface TextConfig     { placeholder: string; minLength?: number; maxLength?: number; prefix: string; suffix: string }
@@ -292,18 +308,20 @@ Operators are grouped by **value kind**, not by field type. A future "Email" fie
 ```ts
 type Predicate =
   | { kind: 'text';   op: 'equals' | 'notEquals' | 'contains'; value: string }
-  | { kind: 'number'; op: 'equals' | 'gt' | 'lt';              value: number }
-  | { kind: 'number'; op: 'between';                            value: { min: number; max: number } }
-  | { kind: 'choice'; op: 'equals' | 'notEquals';               value: OptionId }
+  | { kind: 'number'; op: 'equals' | 'gt' | 'lt';              value: number | null }
+  | { kind: 'number'; op: 'between';                            value: { min: number | null; max: number | null } }
+  | { kind: 'choice'; op: 'equals' | 'notEquals';               value: OptionId | null }
   | { kind: 'multi';  op: 'containsAny' | 'containsAll' | 'containsNone'; value: OptionId[] }
-  | { kind: 'date';   op: 'equals' | 'before' | 'after';        value: IsoDate };
+  | { kind: 'date';   op: 'equals' | 'before' | 'after';        value: IsoDate | null };
 
 interface Condition {
-  id: string;
+  id: ConditionId;
   targetFieldId: FieldId;   // never the owning field (enforced by the builder + schema refinement)
   predicate: Predicate;
 }
 ```
+
+`null` (or an empty string or list) means the author has not finished the condition. It never holds, and it blocks Save.
 
 A condition takes its effect (show, hide, require or not-require) from the group it belongs to, which is how the spec's per-condition _Effect_ is represented. The builder reads as a sentence per group: "Show this field when [all ▾] of these match".
 
@@ -312,7 +330,7 @@ A condition takes its effect (show, hide, require or not-require) from the group
 ```ts
 type FieldValue =
   | { kind: 'text';   value: string }
-  | { kind: 'number'; value: number | null }
+  | { kind: 'number'; input: string }        // the text as typed, so '12a' and '1.505' can be reported (D-15); parseDecimal gives the number
   | { kind: 'date';   value: IsoDate | null }
   | { kind: 'choice'; value: OptionId | null }
   | { kind: 'multi';  value: OptionId[] }
@@ -325,6 +343,7 @@ interface DraftResponse {
   id: ResponseId;
   templateId: TemplateId;
   values: Partial<Record<FieldId, FieldValue>>;   // raw input, including hidden fields (D-9)
+  templateUpdatedAt: IsoDateTime;                 // to tell the user the form changed since (D-23)
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 }
@@ -333,9 +352,16 @@ interface SubmittedResponse {
   status: 'submitted';
   id: ResponseId;
   templateId: TemplateId;
+  createdAt: IsoDateTime;                          // when the form was opened
   submittedAt: IsoDateTime;
-  snapshot: { title: string; description: string; fields: Field[] };   // D-10: what the user actually saw
-  answers: Partial<Record<FieldId, FieldValue>>; // visible fields only, calculations resolved
+  snapshot: ResponseSnapshot;                      // D-10: what the user actually saw (ADR 0010)
+  answers: Partial<Record<FieldId, FieldValue>>;  // visible, non-empty answers only; calculations resolved as Number values
+}
+
+interface ResponseSnapshot {
+  title: string;
+  description: string;
+  fields: Field[];                                 // visible fields only, in form order
 }
 
 type FormResponse = DraftResponse | SubmittedResponse;
@@ -348,18 +374,18 @@ Tagging each value with its `kind` lets the engine and the PDF narrow it safely,
 ```
 formBuilder:v1:templates   →  { schemaVersion: 1, items: Record<TemplateId, FormTemplate> }
 formBuilder:v1:responses   →  { schemaVersion: 1, items: Record<ResponseId, FormResponse> }
-formBuilder:v1:recovery    →  { schemaVersion: 1, items: Record<TemplateId | 'new', FormTemplate> }   // D-33
+formBuilder:v1:recovery    →  { schemaVersion: 1, items: Record<TemplateId | 'new', FormTemplate> }   // D-33 (v1.0, if time allows)
 ```
 
 | Choice | Reasoning |
 | --- | --- |
-| Two collection keys, not one key per entity | Listing all templates takes one read, and response counts per template take one read. At the expected scale (tens of templates, hundreds of responses), rewriting a whole collection is cheap. The repository interface hides this, so moving to IndexedDB later only means swapping the adapter. |
+| Two collection keys, not one key per entity | Listing all templates takes one read, and response counts per template take one read. At the expected scale (tens of templates, hundreds of responses), rewriting a whole collection is cheap. The `Collection` interface (§5.5) hides this, so moving to IndexedDB later only means swapping its implementation. |
 | Not one key for everything | Saving a template would otherwise re-serialise every response. |
 | `Record` keyed by ID, not an array | O(1) lookup and update, with no duplicates. |
 | A `schemaVersion` envelope | `migrations.ts` upgrades old shapes on read. Without the version there is no safe way to evolve the shape. |
-| zod parse on every read | Data in storage is untrusted (user edits, old versions, other tabs). If parsing fails, the raw value is copied to `formBuilder:quarantine:<timestamp>` and an error state is shown. We **never silently wipe** user data. |
+| zod parse on each cache fill | Data in storage is untrusted (user edits, old versions, other tabs). It is parsed when the cache is filled (first read, and after any write or `storage` event), not on every access. If any item fails, the raw value is copied to `formBuilder:quarantine:<key>:<ISO timestamp>`, the whole collection reports an error and refuses writes until the user chooses to start again (ADR 0007). We **never silently wipe** user data. |
 | `QuotaExceededError` handling | Writes return a result type. The UI shows "Storage is full" and keeps the in-memory state so no work is lost. |
-| Cross-tab | A `storage` event invalidates the in-memory cache. On save, the builder compares `updatedAt` and warns if another tab saved in the meantime (last write wins, but never silently). |
+| Cross-tab | A `storage` event invalidates the in-memory cache, so every screen shows the other tab's change. Fill mode keeps the template as it was when the form opened (ADR 0010). From v0.8 the builder compares `updatedAt` on save and warns if another tab saved in the meantime (last write wins, but never silently). |
 
 ---
 
@@ -370,27 +396,29 @@ formBuilder:v1:recovery    →  { schemaVersion: 1, items: Record<TemplateId | '
 Each field type is one folder. The pure half is registered in `fields/registry.ts`. The React half is registered in `fields/ui-registry.ts`, whose type is `{ [K in FieldType]: FieldUi<K> }`, so **forgetting the UI for a new type is a compile error**.
 
 ```ts
-interface FieldDefinition<F extends Field> {
-  type: F['type'];
-  paletteLabel: string;
-  paletteIcon: IconName;
-  valueKind: ValueKind | null;                 // null = display-only
-  create(id: FieldId): F;                      // defaults for a newly added field
-  configSchema: z.ZodType<F['config']>;        // boundary validation
-  validateConfig(field: F, ctx: TemplateContext): ConfigIssue[];       // builder errors
-  initialValue(field: F, now: Date): FieldValue | undefined;          // e.g. date prefill
-  validateValue(field: F, value: FieldValue | undefined, required: boolean): ValueIssue[];
-  formatForExport(field: F, value: FieldValue | undefined): ExportValue; // PDF
+interface FieldDefinition<K extends FieldType> {
+  type: K;
+  paletteLabel: string;                        // palette entry and the config panel's type name
+  icon: IconName;
+  schema: z.ZodType<FieldOf<K>>;               // boundary validation of the whole stored field
+  create(id: FieldId): FieldOf<K>;             // defaults for a newly added field
+  summarize(field: FieldOf<K>): string;        // one line on the canvas
+  validateConfig(field: FieldOf<K>, context: TemplateContext): string[];   // problems that block Save
+  readValue(field: FieldOf<K>, value: FieldValue | undefined): FieldValueOf<K> | undefined;
+  initialValue(field: FieldOf<K>, today: IsoDate): FieldValueOf<K> | undefined;   // e.g. date prefill
+  validateValue(field: FieldOf<K>, value: FieldValueOf<K> | undefined, required: boolean): string | null;  // first problem only
 }
 
 interface FieldUi<K extends FieldType> {
-  Editor:   ComponentType<{ field: FieldOf<K>; context: TemplateContext; onChange(next: FieldOf<K>): void }>;
-  Renderer: ComponentType<{ field: FieldOf<K>; value: FieldValueOf<K> | undefined; required: boolean;
-                            error?: ValueIssue; readOnly?: boolean; onChange(v: FieldValueOf<K>): void }>;
+  Editor(props: { field: FieldOf<K>; context: TemplateContext; onChange(next: FieldOf<K>): void }): ReactNode;
+  Renderer(props: { field: FieldOf<K>; value: FieldValueOf<K> | undefined; required: boolean;
+                    error: string | null; controlId: string; onChange(value: FieldValueOf<K>): void }): ReactNode;
 }
 ```
 
-**Adding an 11th type:** create `fields/<new>/` (definition, editor, renderer, tests), then add one line to each registry and one member to the `Field` union. Builder, Fill, PDF, validation and conditions need no changes.
+Members join as the slices need them: `toExport` in v0.3, `paletteGroup` with the section header in v0.4, `predicateKind` (which operators a condition on this field offers) in v0.6. There is no read-only renderer mode: a submitted response is shown on screen from the export model (§5.6), the same content the PDF prints, so the screen and the PDF cannot disagree and renderers stay input-only (owner's decision at v0.2).
+
+**Adding an 11th type:** create `fields/<new>/` (definition, editor, renderer, tests), add its config interface and `FieldTypeMap` entry in `domain/template.ts`, and add one line to each registry. Builder, Fill, PDF, validation and conditions need no changes, as long as the type's value reuses an existing value kind. `npm run check:seam -- <tag>` shows the diff and fails on anything else.
 
 ### 5.2 Builder state
 
@@ -398,47 +426,52 @@ The builder state is a pure reducer, so every editing rule can be unit-tested wi
 
 ```ts
 type BuilderAction =
-  | { type: 'template/loaded'; template: FormTemplate }
-  | { type: 'title/changed'; title: string }
-  | { type: 'description/changed'; description: string }
-  | { type: 'field/added'; fieldType: FieldType; atIndex?: number }
+  | { type: 'details/changed'; title: string; description: string }   // the details dialog applies both at once (ADR 0009)
+  | { type: 'field/added'; field: Field }          // created by the caller, inserted after the selection
   | { type: 'field/updated'; field: Field }
-  | { type: 'field/removed'; fieldId: FieldId }      // cascades references (D-12)
-  | { type: 'field/moved'; fieldId: FieldId; toIndex: number }
+  | { type: 'field/removed'; fieldId: FieldId }    // reference cascade (D-12) from v0.7
   | { type: 'field/selected'; fieldId: FieldId | null }
-  | { type: 'template/saved'; savedAt: IsoDateTime };
+  | { type: 'template/saved'; template: FormTemplate };
+// From v0.8: { type: 'field/moved'; fieldId: FieldId; toIndex: number }
 
-interface BuilderState { template: FormTemplate; selectedFieldId: FieldId | null; savedSnapshot: FormTemplate }
-// Derived, not stored: isDirty, configIssues (blocks Save), dependants(fieldId), allowedTargets(fieldId)
+interface BuilderState { template: FormTemplate; selectedFieldId: FieldId | null }
+// From v0.8 the state also keeps the last saved template, so isDirty can be derived.
+// Derived, not stored: configIssues (blocks Save); from v0.6, dependants(fieldId) and allowedTargets(fieldId).
 ```
 
 ### 5.3 Rules engine (pure)
 
 ```ts
-function buildDependencyGraph(fields: Field[]): DependencyGraph;   // memoised per template
-function evaluateForm(template: FormTemplate, graph: DependencyGraph,
-                      values: ResponseValues): FormEvaluation;
+function buildDependencyGraph(fields: readonly Field[]): DependencyGraph;   // memoised per template
+function evaluateForm(fields: readonly Field[], values: ResponseValues,
+                      graph = buildDependencyGraph(fields)): FormEvaluation;
+
+interface DependencyGraph {
+  order:  readonly FieldId[];      // dependency order, seeded in form order
+  cyclic: ReadonlySet<FieldId>;    // fields in or downstream of a cycle
+}
 
 interface FormEvaluation {
   visible:   ReadonlySet<FieldId>;
-  required:  ReadonlySet<FieldId>;
-  computed:  ReadonlyMap<FieldId, number | null>;   // calculation results
-  effective: ResponseValues;                         // hidden → empty, calculations filled in
+  required:  ReadonlySet<FieldId>;   // visible fields only
+  effective: ResponseValues;         // hidden fields absent
 }
+// v0.9 adds calculation results and the calculation step through a plugin seam, so the
+// engine never names a field type.
 ```
 
 The algorithm runs in one pass, in topological order:
 
 ```mermaid
 flowchart LR
-  A[Fields + conditions + calc sources] --> B[Build graph: target → dependant]
+  A[Fields + conditions] --> B[Build graph: target → dependant]
   B --> C{Cycle?}
-  C -- yes --> C1[Fields in the cycle use defaults<br/>builder already blocks this]
+  C -- yes --> C1[Fields in or downstream of a cycle use defaults<br/>the builder blocks cycles from v0.6]
   C -- no --> D[Topological order]
   D --> E[For each field in order]
   E --> F["visible = resolve(defaultVisible, show/hide conditions over EFFECTIVE values)"]
   F --> G["required = visible && resolve(defaultRequired, require/unrequire conditions)"]
-  G --> H["effective = visible ? (calc ? aggregate(visible sources) : raw) : empty"]
+  G --> H["effective = visible ? raw : absent (calculation step from v0.9)"]
   H --> E
 ```
 
@@ -450,34 +483,37 @@ active(group) = group.conditions.length > 0 &&
 visible = defaultVisible
   ? !active(logic.hide)
   : active(logic.show) && !active(logic.hide)               // hide beats show (D-2)
-holds(c) = target is non-empty && predicate(c, effective[target])   (D-4)
+holds(c) = predicate is complete && target is non-empty && predicate(c, effective[target])   (D-4)
 ```
 
 ### 5.4 Fill runtime hook
 
 ```ts
-function useFormRuntime(template: FormTemplate, draft: DraftResponse): {
-  evaluation: FormEvaluation;
+function useFormRuntime(template: FormTemplate): {   // a DraftResponse argument joins in v0.10
+  values: ResponseValues;                     // raw input, hidden fields included (D-9)
+  evaluation: FormEvaluation;                 // graph memoised on template.fields
+  issues: ReadonlyMap<FieldId, string>;       // first problem per field, in form order; empty until the first submit attempt
   setValue(fieldId: FieldId, value: FieldValue): void;
-  submit(): { ok: true; response: SubmittedResponse } | { ok: false; issues: ValueIssue[] };
-  issues: ReadonlyMap<FieldId, ValueIssue>;   // shown after the first submit attempt
+  submit(): { ok: true; response: SubmittedResponse } | { ok: false; issues: ReadonlyMap<FieldId, string> };
 };
 ```
 
 Validation runs **on submit**, as the spec says. After the first failed submit, fields re-validate as they change, so the user sees an error clear as soon as they fix it.
 
-### 5.5 Storage repositories
+### 5.5 Storage collections
 
 ```ts
-interface TemplateRepository {
-  list(): Result<TemplateSummary[], StorageError>;   // summary includes fieldCount, responseCount, draftCount
-  get(id: TemplateId): Result<FormTemplate | null, StorageError>;
-  save(t: FormTemplate): Result<void, StorageError>;
-  remove(id: TemplateId): Result<void, StorageError>;  // also removes its responses (D-22)
-  subscribe(listener: () => void): () => void;         // for useSyncExternalStore
+interface Collection<Id extends string, T> {      // one per localStorage key
+  snapshot(): Result<ReadonlyMap<Id, T>, StorageError>;   // cached and referentially stable
+  put(item: T): Result<void, StorageError>;
+  remove(ids: readonly Id[]): Result<void, StorageError>;
+  reset(): Result<void, StorageError>;             // offered only once corrupt data is backed up
+  subscribe(listener: () => void): () => void;     // this tab's writes and other tabs' storage events
 }
-// ResponseRepository has the same shape, plus listSubmitted(templateId) and listDrafts(templateId).
+interface Repositories { templates: Collection<TemplateId, FormTemplate>; responses: Collection<ResponseId, FormResponse> }
 ```
+
+One generic collection replaces the per-entity repositories this section first proposed. Screens derive what they show (the sorted template list, response counts per template) with `useMemo` over `useCollection(collection)`, so storage knows nothing about screens. Deleting a template together with its responses (D-22) arrives in v0.8.
 
 ### 5.6 Export
 
@@ -486,7 +522,7 @@ function toExportModel(response: SubmittedResponse): ExportDocument;  // pure an
 function printDocument(doc: ExportDocument): Promise<void>;           // the thin DOM/iframe side effect
 ```
 
-`ExportDocument` contains the title, the description, `submittedAt`, and an ordered list of `{ kind: 'section', text, level } | { kind: 'answer', label, display: string | string[] }`. It is built from the **snapshot**, so hidden fields are already absent.
+`ExportDocument` contains the title, the description, `submittedAt`, and an ordered list of `{ kind: 'section', text, level } | { kind: 'answer', label, display: string | string[] }`. It is built from the **snapshot**, so hidden fields are already absent. It renders on screen as well as in print: the read-only view of a submitted response (v0.10) uses it too.
 
 ---
 
@@ -521,7 +557,7 @@ Export layout: a header with the form title, the description when set, "Submitte
 | Calculation | A read-only `<output>`, associated with its label, that names its sources. |
 | Submit errors | An error summary at the top gets focus. Each error is a link that jumps to its field (the GOV.UK pattern). |
 | Dynamic changes | One polite live region announces when fields are shown or hidden ("2 fields added below"), when the builder saves, and when a field is added or moved. Announcements are batched so typing never floods a screen reader. |
-| Dialogs | Template details (v0.1) and Preview use `ui/Dialog`: a native `<dialog>` with `showModal()`, which gives a focus trap and Escape to close. `Dialog` returns focus to the trigger itself, falling back to a named element when the trigger has gone. |
+| Dialogs | Template details (v0.1, ADR 0009) and Preview (v0.8) use `ui/Dialog`: a native `<dialog>` with `showModal()`, which gives a focus trap and Escape to close. `Dialog` returns focus to the trigger itself, falling back to a named element when the trigger has gone. |
 | Other | A visible `:focus-visible` ring with at least 3:1 contrast, 24×24 px minimum targets (2.5.8), focus never hidden behind sticky panels (2.4.11), `prefers-reduced-motion` respected, and a focus/title update on every route change. |
 
 ---
@@ -556,7 +592,7 @@ Tests are named by user scenario and assert on observable behaviour (see `AGENTS
 | Field components | each renderer is queried by role and label · single select behaves identically in all three displays (parameterised test) |
 | Feature flows | build → save → refresh → fill → submit → appears in the responses list · submit with missing required shows the error summary with focus · opening _New Response_ and leaving without input saves no draft · a started draft appears under In progress and resumes with its values · a resumed draft whose option was deleted treats that answer as empty · the builder offers to restore unsaved edits after a reload |
 | Export | `toExportModel` omits hidden fields, keeps form order, and formats files as metadata with a footnote |
-| a11y | `vitest-axe` on each page in its key states |
+| a11y | `axe-core` (`axe.run`) on each page in its key states; colour contrast checked by hand |
 
 ---
 
@@ -574,4 +610,4 @@ Delivery follows [`implementation-plan.md`](implementation-plan.md): eleven thin
 | **Q-2** | PDF approach | A: print document + `print()`. B (hand-written PDF bytes) goes under "with more time". |
 | **Q-3** | Persist drafts while filling? | **Resolved (D-23):** yes, because we don't want to lose data. Drafts are saved on first input, autosaved, and listed under In progress so they can be resumed. |
 | **Q-4** | Condition targets: any field, or only fields above? | Any field except itself, with cycle prevention. "Only fields above" removes cycles by construction, but reordering can then invalidate conditions. |
-| **Q-5** | Library set | react-router, zod and @dnd-kit, with no state or UI library and CSS Modules for styling. |
+| **Q-5** | Library set | **Resolved (v0.1):** react-router, zod and @dnd-kit, with no state or UI library and CSS Modules for styling (ADRs 0001–0006). |

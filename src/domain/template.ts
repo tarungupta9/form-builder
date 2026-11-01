@@ -142,3 +142,7 @@ export function groupsOf(logic: FieldLogic): { effect: Effect; group: ConditionG
   }
   return groups;
 }
+
+/** A template can be saved with no fields, but there is nothing to fill in until it has one (D-20). */
+export const acceptsResponses = (template: Pick<FormTemplate, 'fields'>): boolean =>
+  template.fields.length > 0;

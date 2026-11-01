@@ -1,5 +1,5 @@
 import { newFieldId } from '../../domain/ids';
-import { textField } from '../../test/fixtures';
+import { isoDate, num, text, textField } from '../../test/fixtures';
 import { textDefinition } from './definition';
 
 const withLimits = (minLength?: number, maxLength?: number) =>
@@ -39,5 +39,45 @@ describe('Short text definition', () => {
 
   it('rejects a stored field with a negative length', () => {
     expect(textDefinition.schema.safeParse(withLimits(-1)).success).toBe(false);
+  });
+
+  describe('answers', () => {
+    const name = withLimits(2, 5);
+
+    it('asks for an answer when required and empty, counting whitespace as empty', () => {
+      expect(textDefinition.validateValue(name, undefined, true)).toBe('Enter an answer for Name');
+      expect(textDefinition.validateValue(name, text('   '), true)).toBe(
+        'Enter an answer for Name',
+      );
+    });
+
+    it('accepts no answer when optional, even with a minimum length', () => {
+      expect(textDefinition.validateValue(name, text(''), false)).toBeNull();
+    });
+
+    it('accepts answers at both length limits and rejects one character either side', () => {
+      expect(textDefinition.validateValue(name, text('Al'), false)).toBeNull();
+      expect(textDefinition.validateValue(name, text('Alice'), false)).toBeNull();
+      expect(textDefinition.validateValue(name, text('A'), false)).toBe(
+        'Name must be at least 2 characters',
+      );
+      expect(textDefinition.validateValue(name, text('Alicia'), false)).toBe(
+        'Name must be 5 characters or fewer',
+      );
+    });
+
+    it('measures length without the surrounding spaces, and counts an emoji as one character', () => {
+      expect(textDefinition.validateValue(name, text('  Al  '), false)).toBeNull();
+      expect(textDefinition.validateValue(name, text('😀😀'), false)).toBeNull();
+    });
+
+    it('reads a text value and refuses a value of another kind', () => {
+      expect(textDefinition.readValue(name, text('Ada'))).toEqual(text('Ada'));
+      expect(textDefinition.readValue(name, num('5'))).toBeUndefined();
+    });
+
+    it('starts a new response empty', () => {
+      expect(textDefinition.initialValue(name, isoDate('2026-11-01'))).toBeUndefined();
+    });
   });
 });

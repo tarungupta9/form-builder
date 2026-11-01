@@ -4,11 +4,23 @@
  */
 import {
   type FieldId,
+  type IsoDate,
+  type OptionId,
   newConditionId,
   newFieldId,
+  newResponseId,
   newTemplateId,
+  parseIsoDate,
   toIsoDateTime,
 } from '../domain/ids';
+import type {
+  DateValue,
+  MultiValue,
+  NumberValue,
+  ResponseValues,
+  SubmittedResponse,
+  TextValue,
+} from '../domain/response';
 import {
   type Condition,
   type ConditionGroup,
@@ -47,4 +59,33 @@ export const group = (
 export const template = (fields: FormTemplate['fields'], title = 'Expense claim'): FormTemplate => {
   const now = toIsoDateTime(new Date('2026-10-31T14:05:00Z'));
   return { id: newTemplateId(), title, description: '', fields, createdAt: now, updatedAt: now };
+};
+
+// Values, as a renderer would produce them.
+export const text = (value: string): TextValue => ({ kind: 'text', value });
+export const num = (input: string): NumberValue => ({ kind: 'number', input });
+export const multi = (...value: OptionId[]): MultiValue => ({ kind: 'multi', value });
+export const date = (raw: string): DateValue => ({ kind: 'date', value: isoDate(raw) });
+
+export function isoDate(raw: string): IsoDate {
+  const parsed = parseIsoDate(raw);
+  if (!parsed) throw new Error(`Not a calendar date: ${raw}`);
+  return parsed;
+}
+
+/** A submitted response to `form`, answered with `answers`, snapshotting every field. */
+export const submittedResponse = (
+  form: FormTemplate,
+  answers: ResponseValues = {},
+): SubmittedResponse => {
+  const at = toIsoDateTime(new Date('2026-11-01T09:30:00Z'));
+  return {
+    status: 'submitted',
+    id: newResponseId(),
+    templateId: form.id,
+    createdAt: at,
+    submittedAt: at,
+    snapshot: { title: form.title, description: form.description, fields: form.fields },
+    answers,
+  };
 };

@@ -12,8 +12,10 @@ import {
   parseIsoDate,
   parseIsoDateTime,
   parseOptionId,
+  parseResponseId,
   parseTemplateId,
 } from './ids';
+import type { FieldValue, FileMeta } from './response';
 import type { Condition, ConditionGroup, InputFieldLogic, Predicate } from './template';
 
 /** A string schema that only yields a branded value when `parse` accepts it. */
@@ -32,6 +34,7 @@ export const templateIdSchema = branded(parseTemplateId, 'template ID');
 export const fieldIdSchema = branded(parseFieldId, 'field ID');
 export const optionIdSchema = branded(parseOptionId, 'option ID');
 export const conditionIdSchema = branded(parseConditionId, 'condition ID');
+export const responseIdSchema = branded(parseResponseId, 'response ID');
 export const isoDateSchema = branded(parseIsoDate, 'date');
 export const isoDateTimeSchema = branded(parseIsoDateTime, 'timestamp');
 
@@ -92,6 +95,26 @@ export const inputFieldLogicSchema: z.ZodType<InputFieldLogic> = z.object({
   require: conditionGroupSchema,
   unrequire: conditionGroupSchema,
 });
+
+export const fileMetaSchema: z.ZodType<FileMeta> = z.object({
+  name: z.string(),
+  size: count,
+  type: z.string(),
+  lastModified: z.number(),
+});
+
+/**
+ * Every kind of answer. Whether a value fits the field it answers is the field's plugin's call
+ * (`readValue`), checked where both are known: in the response schema.
+ */
+export const fieldValueSchema: z.ZodType<FieldValue> = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('text'), value: z.string() }),
+  z.object({ kind: z.literal('number'), input: z.string() }),
+  z.object({ kind: z.literal('date'), value: isoDateSchema.nullable() }),
+  z.object({ kind: z.literal('choice'), value: optionIdSchema.nullable() }),
+  z.object({ kind: z.literal('multi'), value: z.array(optionIdSchema) }),
+  z.object({ kind: z.literal('files'), value: z.array(fileMetaSchema) }),
+]);
 
 /**
  * The common shape of every field, with the config schema and logic schema of one type.

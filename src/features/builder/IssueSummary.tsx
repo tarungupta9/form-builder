@@ -1,8 +1,8 @@
 import { type RefObject } from 'react';
 import type { FieldId } from '../../domain/ids';
 import type { Field } from '../../domain/template';
+import { ErrorSummary, type ErrorSummaryItem } from '../../ui/ErrorSummary';
 import { plural } from '../../ui/format';
-import styles from './Builder.module.css';
 import { fieldName } from './Canvas';
 import type { ConfigIssues } from './configIssues';
 
@@ -15,10 +15,7 @@ interface IssueSummaryProps {
   onShowField: (fieldId: FieldId, issue: string) => void;
 }
 
-/**
- * Shown when Save is blocked: every problem, each a button that opens the setting to fix
- * (the GOV.UK error summary pattern). It takes focus, so the author hears why nothing saved.
- */
+/** Shown when Save is blocked: every problem, each one opening the setting to fix. */
 export function IssueSummary({
   issues,
   fields,
@@ -26,36 +23,38 @@ export function IssueSummary({
   onShowDetails,
   onShowField,
 }: IssueSummaryProps) {
+  const items: ErrorSummaryItem[] = [
+    ...issues.form.map((issue) => ({
+      key: issue,
+      label: (
+        <>
+          <span>Title and description</span>: <span>{issue}</span>
+        </>
+      ),
+      onSelect: onShowDetails,
+    })),
+    ...fields.flatMap((field, index) =>
+      (issues.fields.get(field.id) ?? []).map((issue) => ({
+        key: `${field.id}-${issue}`,
+        label: (
+          <>
+            <span>
+              Field {index + 1}, {fieldName(field)}
+            </span>
+            : <span>{issue}</span>
+          </>
+        ),
+        onSelect: () => {
+          onShowField(field.id, issue);
+        },
+      })),
+    ),
+  ];
   return (
-    <div ref={ref} role="alert" tabIndex={-1} className={styles.issueSummary}>
-      <h2 className={styles.issueTitle}>Fix {plural(issues.count, 'problem')} before saving</h2>
-      <ul className={styles.issueList}>
-        {issues.form.map((issue) => (
-          <li key={issue}>
-            <button type="button" className={styles.issueLink} onClick={onShowDetails}>
-              <span>Title and description</span>: <span>{issue}</span>
-            </button>
-          </li>
-        ))}
-        {fields.map((field, index) =>
-          (issues.fields.get(field.id) ?? []).map((issue) => (
-            <li key={`${field.id}-${issue}`}>
-              <button
-                type="button"
-                className={styles.issueLink}
-                onClick={() => {
-                  onShowField(field.id, issue);
-                }}
-              >
-                <span>
-                  Field {index + 1}, {fieldName(field)}
-                </span>
-                : <span>{issue}</span>
-              </button>
-            </li>
-          )),
-        )}
-      </ul>
-    </div>
+    <ErrorSummary
+      ref={ref}
+      title={`Fix ${plural(issues.count, 'problem')} before saving`}
+      items={items}
+    />
   );
 }

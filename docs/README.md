@@ -20,3 +20,4 @@ Architecture decision records, in the order they were made. The template is [`de
 | [0007](decisions/0007-localstorage-schema.md)              | Store one versioned collection per entity kind in `localStorage`       | Accepted |
 | [0008](decisions/0008-field-types-as-plugins.md)           | Make each field type a plugin behind one contract                      | Accepted |
 | [0009](decisions/0009-template-details-in-a-dialog.md)     | Edit the template's title and description in a dialog from the heading | Accepted |
+| [0010](decisions/0010-response-snapshot.md)                | Store a snapshot of the form with each submitted response              | Accepted |

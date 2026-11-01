@@ -5,9 +5,10 @@
 import type { Field, FieldType } from '../domain/template';
 import type { FieldUi } from './contract';
 import { TextEditor } from './text/TextEditor';
+import { TextRenderer } from './text/TextRenderer';
 
 export const fieldUi: { readonly [K in FieldType]: FieldUi<K> } = {
-  text: { Editor: TextEditor },
+  text: { Editor: TextEditor, Renderer: TextRenderer },
 };
 
 export function uiOf(field: Field): FieldUi<FieldType> {

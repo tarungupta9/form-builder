@@ -1,0 +1,69 @@
+/* The respondent's controls: a tinted well with a strong bottom rule. */
+.answer {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-bottom: 2px solid var(--color-primary);
+  border-radius: 2px 2px 0 0;
+  background: var(--color-tint);
+  font-size: 17px;
+  color: var(--color-answer);
+}
+
+.answer::placeholder {
+  color: var(--color-text-muted);
+}
+
+.answer:focus,
+.adorned:focus-within {
+  background: var(--color-tint-strong);
+  border-bottom-color: var(--color-answer);
+}
+
+.answer[aria-invalid='true'],
+.adorned:has([aria-invalid='true']) {
+  border-bottom-color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+/* Prefix and suffix sit inside the well, and the focus ring wraps the whole thing. */
+.adorned {
+  display: flex;
+  align-items: stretch;
+  min-height: 48px;
+  border-bottom: 2px solid var(--color-primary);
+  border-radius: 2px 2px 0 0;
+  background: var(--color-tint);
+}
+
+.adorned:focus-within {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.adorned .answer {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+}
+
+.adorned .answer:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.adornment {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  font-weight: 700;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.adornment + .answer {
+  padding-left: 2px;
+}

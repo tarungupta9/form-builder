@@ -24,5 +24,5 @@ Pros: no dependency. The reducer is a pure function, so every editing rule is a 
 ## Consequences
 
 - Actions carry finished values: a new field arrives already created with its fresh ID, so the reducer has no randomness or clock and its tests are deterministic.
-- Derived values (config issues, the dirty flag from v0.6) are computed, never stored, so they cannot drift from the template.
+- Derived values (config issues, the dirty flag from v0.8) are computed, never stored, so they cannot drift from the template.
 - Repositories are created once and passed through context, never imported as singletons, so each test runs the real app over its own storage.

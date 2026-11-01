@@ -3,9 +3,9 @@
  * switches on the type itself. A field type is one folder that implements `FieldDefinition`
  * (pure) and `FieldUi` (React), registered in `registry.ts` and `ui-registry.ts`.
  *
- * The contract grows with the app, one capability per slice: this version covers what the
- * builder and storage need. Filling in, validating answers and exporting arrive in later
- * slices as new members, which every registered type must then implement.
+ * The contract grows with the app, one capability per slice: v0.1 covered what the builder and
+ * storage need, v0.2 adds filling in and validating answers. Exporting arrives in v0.3 as new
+ * members, which every registered type must then implement.
  *
  * Methods are declared with method syntax on purpose. TypeScript checks method parameters
  * bivariantly, which lets `FieldDefinition<'text'>` be used where `FieldDefinition<FieldType>` is
@@ -14,8 +14,9 @@
  */
 import type { ReactNode } from 'react';
 import type { z } from 'zod';
-import type { FieldId } from '../domain/ids';
-import type { Field, FieldOf, FieldType } from '../domain/template';
+import type { FieldId, IsoDate } from '../domain/ids';
+import type { FieldValue } from '../domain/response';
+import type { Field, FieldOf, FieldType, FieldValueOf } from '../domain/template';
 import type { IconName } from '../ui/icons';
 
 /** What the builder knows about the whole form while one field is being configured. */
@@ -37,6 +38,33 @@ export interface FieldDefinition<K extends FieldType> {
   summarize(field: FieldOf<K>): string;
   /** Problems with the type's own settings that block Save, phrased for the form's author. */
   validateConfig(field: FieldOf<K>, context: TemplateContext): string[];
+
+  /**
+   * Narrows a value of unknown kind to this type's value, or `undefined` when it does not fit
+   * the field. Shared code holds answers as `FieldValue`; this is how it hands a plugin its own.
+   */
+  readValue(field: FieldOf<K>, value: FieldValue | undefined): FieldValueOf<K> | undefined;
+  /** The value a new response starts with, such as today's date; `undefined` for none. */
+  initialValue(field: FieldOf<K>, today: IsoDate): FieldValueOf<K> | undefined;
+  /**
+   * The first problem with an answer, phrased for the respondent, or `null` when it is fine.
+   * `required` is the field's resolved state (conditions included), not its Required toggle.
+   */
+  validateValue(
+    field: FieldOf<K>,
+    value: FieldValueOf<K> | undefined,
+    required: boolean,
+  ): string | null;
+}
+
+export interface RendererProps<K extends FieldType> {
+  field: FieldOf<K>;
+  value: FieldValueOf<K> | undefined;
+  required: boolean;
+  error: string | null;
+  /** The ID the control must carry, so an error summary link can move focus to it. */
+  controlId: string;
+  onChange(this: void, value: FieldValueOf<K>): void;
 }
 
 export interface EditorProps<K extends FieldType> {
@@ -49,4 +77,6 @@ export interface EditorProps<K extends FieldType> {
 export interface FieldUi<K extends FieldType> {
   /** The type-specific settings in the builder's config panel (label and Required are shared). */
   Editor(this: void, props: EditorProps<K>): ReactNode;
+  /** The respondent's control in Fill mode, with its label, hint and error. */
+  Renderer(this: void, props: RendererProps<K>): ReactNode;
 }

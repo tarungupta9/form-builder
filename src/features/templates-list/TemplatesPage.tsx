@@ -5,13 +5,15 @@ import { PageHeader } from '../../ui/PageHeader';
 import { StorageErrorPanel } from '../storage-error/StorageErrorPanel';
 import { TemplateCard } from './TemplateCard';
 import styles from './TemplatesPage.module.css';
+import { useResponseCounts } from './useResponseCounts';
 import { useTemplates } from './useTemplates';
 
 /** Home: every template, or a way to make the first one. */
 export function TemplatesPage() {
   usePageTitle('Templates');
-  const { templates: repository } = useRepositories();
+  const { templates: repository, responses: responseRepository } = useRepositories();
   const templates = useTemplates();
+  const responseCounts = useResponseCounts();
 
   if (!templates.ok) {
     return (
@@ -20,6 +22,17 @@ export function TemplatesPage() {
         headingLevel={1}
         startAgainLabel="Start again with no templates"
         onStartAgain={() => repository.reset()}
+      />
+    );
+  }
+
+  if (!responseCounts.ok) {
+    return (
+      <StorageErrorPanel
+        error={responseCounts.error}
+        headingLevel={1}
+        startAgainLabel="Start again with no responses"
+        onStartAgain={() => responseRepository.reset()}
       />
     );
   }
@@ -44,7 +57,11 @@ export function TemplatesPage() {
       ) : (
         <ul className={styles.grid}>
           {templates.value.map((template) => (
-            <TemplateCard key={template.id} template={template} />
+            <TemplateCard
+              key={template.id}
+              template={template}
+              responseCount={responseCounts.value.get(template.id) ?? 0}
+            />
           ))}
         </ul>
       )}

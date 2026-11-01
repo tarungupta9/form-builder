@@ -8,7 +8,7 @@ import type { Field, FormTemplate } from '../../domain/template';
 
 export interface BuilderState {
   template: FormTemplate;
-  /** The field whose settings the config panel shows; `null` shows the form's own settings. */
+  /** The field whose settings the config panel shows; `null` when none is, and the panel says so. */
   selectedFieldId: FieldId | null;
 }
 

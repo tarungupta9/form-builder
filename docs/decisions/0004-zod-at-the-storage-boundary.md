@@ -29,4 +29,5 @@ zod. Shared parts of the model (IDs, conditions, field logic) are in `domain/sch
 
 - A template that fails validation is never used. The collection copies the raw value to a quarantine key and reports it (ADR 0007), so bad data is neither trusted nor lost.
 - A new field type's schema joins the storage schema by being registered; storage code does not change.
+- The shared schemas live in `domain/schemas.ts`, not `storage/`, because each plugin builds its field schema from them (`fieldSchemaOf`, the logic and ID schemas), and plugins sit below storage: importing from `storage/` would point a dependency upward.
 - Invariants checked at load time are only for data the builder could never produce. The builder enforces the same rules as the author edits.

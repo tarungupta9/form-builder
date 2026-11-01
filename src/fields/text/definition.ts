@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { fieldSchemaOf, inputFieldLogicSchema, optionalCount } from '../../domain/schemas';
 import { defaultInputLogic } from '../../domain/template';
 import type { FieldDefinition } from '../contract';
-import { lengthConfigIssues } from '../shared/textRules';
+import { valueOfKind } from '../shared/helpers';
+import { lengthConfigIssues, validateText } from '../shared/textRules';
 
 const configSchema = z.object({
   placeholder: z.string(),
@@ -34,4 +35,8 @@ export const textDefinition: FieldDefinition<'text'> = {
       .filter(Boolean)
       .join(', '),
   validateConfig: ({ config }) => lengthConfigIssues(config),
+
+  readValue: (_field, value) => valueOfKind(value, 'text'),
+  initialValue: () => undefined,
+  validateValue: (field, value, required) => validateText(field, field.config, value, required),
 };

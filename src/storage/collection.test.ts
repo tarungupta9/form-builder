@@ -1,4 +1,12 @@
-import { condition, group, template, textField } from '../test/fixtures';
+import {
+  condition,
+  group,
+  num,
+  submittedResponse,
+  template,
+  text,
+  textField,
+} from '../test/fixtures';
 import { QUARANTINE_PREFIX } from './collection';
 import { STORAGE_KEYS, createRepositories } from './repositories';
 
@@ -88,5 +96,34 @@ describe('template storage', () => {
     repos.templates.subscribe(listener);
     window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEYS.templates }));
     expect(listener).toHaveBeenCalled();
+  });
+});
+
+describe('response storage', () => {
+  it('round-trips a submitted response with its snapshot', () => {
+    const name = textField('Name');
+    const saved = submittedResponse(template([name]), { [name.id]: text('Ada') });
+
+    expect(repositories().responses.put(saved).ok).toBe(true);
+
+    const reread = repositories().responses.snapshot();
+    expect(reread.ok && reread.value.get(saved.id)).toEqual(saved);
+  });
+
+  it.each([
+    ['of the wrong kind for its field', (fieldId: string) => ({ [fieldId]: num('5') })],
+    ['for a field missing from the snapshot', () => ({ [textField('Gone').id]: text('x') })],
+  ])('rejects a stored response with an answer %s', (_case, answersFor) => {
+    const name = textField('Name');
+    const bad = submittedResponse(template([name]));
+    localStorage.setItem(
+      STORAGE_KEYS.responses,
+      JSON.stringify({
+        schemaVersion: 1,
+        items: { [bad.id]: { ...bad, answers: answersFor(name.id) } },
+      }),
+    );
+
+    expect(repositories().responses.snapshot().ok).toBe(false);
   });
 });

@@ -38,4 +38,4 @@ One key per entity kind, with a `schemaVersion` envelope and items in a `Record`
 - The stored shape is final from v0.1: templates are saved with their full condition logic (empty groups), so no migration is needed between slices.
 - A record whose key disagrees with its own ID is treated as corrupt, because lookup by ID would never find it.
 - The repository interface hides the key layout, so moving to IndexedDB later swaps the adapter, not the screens.
-- Last write wins across tabs for now; v0.6 warns before saving over a newer copy.
+- Last write wins across tabs for now; v0.8 warns before saving over a newer copy.

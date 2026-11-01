@@ -7,6 +7,7 @@ import { KEEP_FOCUS } from '../../app/navigation';
 import type { StorageError } from '../../storage/result';
 import { describeStorageError } from '../../storage/storageMessages';
 import { Button, ButtonLink, IconButton } from '../../ui/Button';
+import { FailureAlert } from '../../ui/ErrorSummary';
 import { useAnnounce } from '../../ui/LiveRegion';
 import { PageHeader } from '../../ui/PageHeader';
 import { formatDateTime } from '../../ui/format';
@@ -19,7 +20,7 @@ import { IssueSummary } from './IssueSummary';
 import { DETAILS_IDS, TemplateDetailsDialog } from './TemplateDetailsDialog';
 import { LABEL_MISSING } from './configIssues';
 import { useBuilder } from './useBuilder';
-import { useFocusRequest } from './useFocusRequest';
+import { useFocusRequest } from '../../ui/useFocusRequest';
 
 interface BuilderProps {
   initial: FormTemplate;
@@ -136,12 +137,7 @@ export function Builder({ initial, isNew }: BuilderProps) {
         </p>
       </PageHeader>
 
-      {storageError && (
-        <div role="alert" className={styles.storageAlert}>
-          <h2 className={styles.issueTitle}>{describeStorageError(storageError).title}</h2>
-          <p>{describeStorageError(storageError).body}</p>
-        </div>
-      )}
+      {storageError && <FailureAlert {...describeStorageError(storageError)} />}
       {showSummary && (
         <IssueSummary
           ref={summaryRef}

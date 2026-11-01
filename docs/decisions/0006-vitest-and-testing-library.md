@@ -29,4 +29,5 @@ Vitest with jsdom, Testing Library and user-event. Pure modules (reducer, config
 
 - A "full page refresh" is tested by unmounting and rendering again with fresh repositories: only what reached `localStorage` survives.
 - jsdom differs from browsers in small ways that tests must not encode. Two found so far: Node's `Request` rejects jsdom's `AbortSignal`, which breaks React Router navigation (worked around in `test/setup.ts`), and jsdom adds a space before inline hidden text in accessible names (the matchers tolerate it).
+- Accessibility checks call `axe-core` directly (`axe.run` on the rendered container) instead of adding `vitest-axe`: one fewer dependency, and the assertion `expect(violations).toEqual([])` prints each violation in full. Colour contrast is disabled there, because jsdom does no layout; it is checked by hand against the tokens.
 - Before sign-off, a sample of tests is checked by breaking the behaviour they name and watching them fail.
