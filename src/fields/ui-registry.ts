@@ -4,11 +4,23 @@
  */
 import type { Field, FieldType } from '../domain/template';
 import type { FieldUi } from './contract';
+import { DateEditor } from './date/DateEditor';
+import { DateRenderer } from './date/DateRenderer';
+import { NumberEditor } from './number/NumberEditor';
+import { NumberRenderer } from './number/NumberRenderer';
+import { SectionEditor } from './section/SectionEditor';
+import { SectionRenderer } from './section/SectionRenderer';
 import { TextEditor } from './text/TextEditor';
 import { TextRenderer } from './text/TextRenderer';
+import { TextareaEditor } from './textarea/TextareaEditor';
+import { TextareaRenderer } from './textarea/TextareaRenderer';
 
 export const fieldUi: { readonly [K in FieldType]: FieldUi<K> } = {
   text: { Editor: TextEditor, Renderer: TextRenderer },
+  textarea: { Editor: TextareaEditor, Renderer: TextareaRenderer },
+  number: { Editor: NumberEditor, Renderer: NumberRenderer },
+  date: { Editor: DateEditor, Renderer: DateRenderer },
+  section: { Editor: SectionEditor, Renderer: SectionRenderer },
 };
 
 export function uiOf(field: Field): FieldUi<FieldType> {

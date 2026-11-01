@@ -23,3 +23,4 @@ Architecture decision records, in the order they were made. The template is [`de
 | [0010](decisions/0010-response-snapshot.md)                | Store a snapshot of the form with each submitted response                     | Accepted                                           |
 | [0011](decisions/0011-pdf-through-the-print-dialog.md)     | Export PDFs through the browser's print dialog, from one shared response view | Accepted                                           |
 | [0012](decisions/0012-set-aside-unreadable-items.md)       | Set aside unreadable stored items one by one, not the whole collection        | Accepted                                           |
+| [0013](decisions/0013-number-as-a-text-input.md)           | Take Number answers in a text input, not `type="number"`                      | Accepted                                           |

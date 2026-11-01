@@ -1,5 +1,5 @@
 import type { ConditionId, FieldId, IsoDate, IsoDateTime, OptionId, TemplateId } from './ids';
-import type { TextValue } from './response';
+import type { DateValue, NumberValue, TextValue } from './response';
 
 export interface FormTemplate {
   id: TemplateId;
@@ -89,6 +89,37 @@ export interface TextConfig {
   suffix: string;
 }
 
+export interface TextareaConfig {
+  placeholder: string;
+  minLength?: number;
+  maxLength?: number;
+  /** How tall the box starts, 1 to 30 rows. */
+  rows: number;
+}
+
+export interface NumberConfig {
+  min?: number;
+  max?: number;
+  /** More decimal places than this is an error, never silently rounded (D-15). */
+  decimals: Decimals;
+  prefix: string;
+  suffix: string;
+}
+
+export interface DateConfig {
+  /** Each new response starts with today's local date (D-16). */
+  prefillToday: boolean;
+  minDate?: IsoDate;
+  maxDate?: IsoDate;
+}
+
+/** XL to XS, which are heading levels `h2` to `h6` (D-18). */
+export type SectionSize = 'xl' | 'lg' | 'md' | 'sm' | 'xs';
+
+export interface SectionConfig {
+  size: SectionSize;
+}
+
 // ---------------------------------------------------------------------------------------------
 // The field union
 // ---------------------------------------------------------------------------------------------
@@ -104,6 +135,11 @@ export interface TextConfig {
  */
 export interface FieldTypeMap {
   text: { config: TextConfig; value: TextValue; logic: InputFieldLogic };
+  textarea: { config: TextareaConfig; value: TextValue; logic: InputFieldLogic };
+  number: { config: NumberConfig; value: NumberValue; logic: InputFieldLogic };
+  date: { config: DateConfig; value: DateValue; logic: InputFieldLogic };
+  /** Display only: it holds no value (`never`) and has no required axis. */
+  section: { config: SectionConfig; value: never; logic: FieldLogic };
 }
 
 export type FieldType = keyof FieldTypeMap;

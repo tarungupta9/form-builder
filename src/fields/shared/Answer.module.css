@@ -11,6 +11,12 @@
   color: var(--color-answer);
 }
 
+textarea.answer {
+  padding: var(--space-3);
+  line-height: 24px;
+  resize: vertical;
+}
+
 .answer::placeholder {
   color: var(--color-text-muted);
 }
@@ -66,4 +72,13 @@
 
 .adornment + .answer {
   padding-left: 2px;
+}
+
+/* Short answers (a number, a date) need not span the page. */
+.narrow {
+  max-width: 240px;
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
 }

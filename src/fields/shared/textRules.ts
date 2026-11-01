@@ -41,7 +41,9 @@ export function lengthHint(limits: LengthLimits): string | null {
   return null;
 }
 
-const capitalise = (text: string): string => text.charAt(0).toLocaleUpperCase() + text.slice(1);
+/** "this field must…" → "This field must…", for messages that start with the field's name. */
+export const capitalise = (text: string): string =>
+  text.charAt(0).toLocaleUpperCase() + text.slice(1);
 
 /** Length limits that would reject every answer. Shared by Short text and Long text. */
 export function lengthConfigIssues(limits: LengthLimits): string[] {

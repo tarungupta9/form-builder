@@ -4,10 +4,18 @@
  */
 import type { Field, FieldType } from '../domain/template';
 import type { FieldDefinition } from './contract';
+import { dateDefinition } from './date/definition';
+import { numberDefinition } from './number/definition';
+import { sectionDefinition } from './section/definition';
 import { textDefinition } from './text/definition';
+import { textareaDefinition } from './textarea/definition';
 
 export const fieldRegistry: { readonly [K in FieldType]: FieldDefinition<K> } = {
   text: textDefinition,
+  textarea: textareaDefinition,
+  number: numberDefinition,
+  date: dateDefinition,
+  section: sectionDefinition,
 };
 
 /**
