@@ -1,5 +1,5 @@
-import { type SyntheticEvent, useMemo, useState } from 'react';
-import type { SubmittedResponse } from '../../domain/response';
+import { type SyntheticEvent, useEffect, useMemo, useState } from 'react';
+import type { ResponseValues, SubmittedResponse } from '../../domain/response';
 import type { FormTemplate } from '../../domain/template';
 import type { Result } from '../../storage/result';
 import { Button } from '../../ui/Button';
@@ -9,7 +9,7 @@ import { useFocusRequest } from '../../ui/useFocusRequest';
 import styles from './Fill.module.css';
 import { FillField, controlIdOf } from './FillField';
 import { type SaveError, describeSaveError } from './useSaveResponse';
-import { useFormRuntime } from './useFormRuntime';
+import { type FormStart, useFormRuntime } from './useFormRuntime';
 import { useFormChangeAnnouncements } from './useFormChangeAnnouncements';
 
 const SUMMARY_ID = 'response-error-summary';
@@ -18,6 +18,13 @@ interface FillFormProps {
   template: FormTemplate;
   /** Stores the response. The form stays as it is, answers included, when this fails. */
   onSubmit: (response: SubmittedResponse) => Result<void, SaveError>;
+  /** The response's ID, when it was opened, and answers it already has. Preview leaves it out. */
+  start?: FormStart;
+  /**
+   * Told the raw answers after each change the respondent makes, never for initial values.
+   * Fill saves its draft from here; the form itself stores nothing, so Preview stays draft-free.
+   */
+  onValuesChange?: (values: ResponseValues) => void;
 }
 
 /**
@@ -25,13 +32,16 @@ interface FillFormProps {
  * are required come from `useFormRuntime`, re-evaluated on every change, so fields appear and
  * disappear as the respondent types; this component wires that to the screen and says so.
  */
-export function FillForm({ template, onSubmit }: FillFormProps) {
-  const { values, evaluation, issues, setValue, submit } = useFormRuntime(template);
+export function FillForm({ template, onSubmit, start, onValuesChange }: FillFormProps) {
+  const { values, edited, evaluation, issues, setValue, submit } = useFormRuntime(template, start);
   const [saveError, setSaveError] = useState<SaveError | null>(null);
   const focusLater = useFocusRequest();
   const visibleFields = template.fields.filter((field) => evaluation.visible.has(field.id));
   const context = useMemo(() => ({ fields: template.fields }), [template.fields]);
   useFormChangeAnnouncements(template.fields, evaluation, values);
+  useEffect(() => {
+    if (edited) onValuesChange?.(values);
+  }, [edited, values, onValuesChange]);
 
   const handleSubmit = (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();

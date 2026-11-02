@@ -3,18 +3,19 @@ import { Button, ButtonLink } from '../../ui/Button';
 import { formatDateTime, plural } from '../../ui/format';
 import { NO_FIELDS_REASON } from '../fill/noFieldsReason';
 import styles from './TemplatesPage.module.css';
+import type { ResponseCounts } from './useResponseCounts';
 
 /** The card's title, which takes focus when a neighbouring card is deleted. */
 export const cardTitleId = (template: FormTemplate): string => `template-title-${template.id}`;
 
 interface TemplateCardProps {
   template: FormTemplate;
-  responseCount: number;
+  responseCounts: ResponseCounts;
   onDelete: (template: FormTemplate) => void;
 }
 
 /** One template on the home page. Presentational: everything it shows comes from its props. */
-export function TemplateCard({ template, responseCount, onDelete }: TemplateCardProps) {
+export function TemplateCard({ template, responseCounts, onDelete }: TemplateCardProps) {
   // The title tells the cards' buttons apart; the visible words lead the name (WCAG 2.5.3).
   const forTitle = <span className="visually-hidden">: {template.title}</span>;
   const reasonId = `no-fields-${template.id}`;
@@ -27,7 +28,7 @@ export function TemplateCard({ template, responseCount, onDelete }: TemplateCard
       </h2>
       {template.description && <p className={styles.description}>{template.description}</p>}
       <p className={styles.meta}>{plural(template.fields.length, 'field')}</p>
-      <p className={styles.meta}>{plural(responseCount, 'response')}</p>
+      <p className={styles.meta}>{describeCounts(responseCounts)}</p>
       <p className={styles.meta}>
         Last edited <time dateTime={template.updatedAt}>{formatDateTime(template.updatedAt)}</time>
       </p>
@@ -78,4 +79,10 @@ export function TemplateCard({ template, responseCount, onDelete }: TemplateCard
       )}
     </li>
   );
+}
+
+/** "12 responses · 2 in progress"; drafts are mentioned only when there are some (D-23). */
+function describeCounts({ submitted, inProgress }: ResponseCounts): string {
+  const responses = plural(submitted, 'response');
+  return inProgress > 0 ? `${responses} · ${inProgress} in progress` : responses;
 }

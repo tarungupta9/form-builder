@@ -11,7 +11,7 @@ import type { Result, StorageError } from './result';
 export interface TemplateResponses {
   ids: ResponseId[];
   submitted: number;
-  /** Drafts, which arrive in v0.10; until then always 0. */
+  /** Drafts (D-23). */
   inProgress: number;
 }
 

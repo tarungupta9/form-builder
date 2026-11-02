@@ -34,6 +34,9 @@ export const routes: RouteObject[] = [
       { path: 'templates/:templateId/edit', element: <BuilderPage /> },
       { path: 'templates/:templateId/respond', element: <FillPage /> },
       { path: 'templates/:templateId/responses', element: <ResponsesPage /> },
+      // The same page as `respond`, so the first input can move a new response to its own URL
+      // without remounting the form (D-23). A submitted response opens read-only here.
+      { path: 'templates/:templateId/responses/:responseId', element: <FillPage /> },
       { path: '*', element: <NotFound /> },
     ],
   },

@@ -64,3 +64,23 @@
   font-size: 22px;
   line-height: 28px;
 }
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  max-width: 760px;
+  margin-bottom: var(--space-5);
+}
+
+.section + .section {
+  margin-top: var(--space-8);
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

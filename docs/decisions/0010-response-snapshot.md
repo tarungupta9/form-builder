@@ -1,6 +1,6 @@
 # 0010. Store a snapshot of the form with each submitted response
 
-- **Status:** Accepted
+- **Status:** Accepted (the same-URL confirmation superseded by [0019](0019-drafts-and-resume.md))
 - **Date:** 2026-11-01
 
 ## Context

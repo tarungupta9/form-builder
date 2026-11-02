@@ -15,7 +15,7 @@ import { StorageErrorPanel } from '../storage-error/StorageErrorPanel';
 import { DeleteTemplateDialog, type PendingDeletion } from './DeleteTemplateDialog';
 import { TemplateCard, cardTitleId } from './TemplateCard';
 import styles from './TemplatesPage.module.css';
-import { useResponseCounts } from './useResponseCounts';
+import { NO_RESPONSES, useResponseCounts } from './useResponseCounts';
 import { useTemplates } from './useTemplates';
 
 const EMPTY_TITLE_ID = 'empty-title';
@@ -40,7 +40,7 @@ export function TemplatesPage() {
     const responses = responseRepository.snapshot();
     setDeletion({
       template,
-      responseCount: responses.ok ? responsesOf(responses.value, template.id).submitted : 0,
+      responseCounts: responses.ok ? responsesOf(responses.value, template.id) : NO_RESPONSES,
       focusAfter: neighbour ? cardTitleId(neighbour) : EMPTY_TITLE_ID,
       open: true,
     });
@@ -51,7 +51,8 @@ export function TemplatesPage() {
   };
 
   /** The dialog moves focus as it closes, to the neighbour or back to Delete; nothing else does. */
-  const confirmDeletion = ({ template, responseCount }: PendingDeletion) => {
+  const confirmDeletion = ({ template, responseCounts }: PendingDeletion) => {
+    const responseCount = responseCounts.submitted + responseCounts.inProgress;
     const deleted = deleteTemplate(repositories, template.id);
     closeDeletion();
     if (!deleted.ok) {
@@ -113,7 +114,7 @@ export function TemplatesPage() {
             <TemplateCard
               key={template.id}
               template={template}
-              responseCount={responseCounts.value.get(template.id) ?? 0}
+              responseCounts={responseCounts.value.get(template.id) ?? NO_RESPONSES}
               onDelete={(chosen) => {
                 askToDelete(chosen, templates.value);
               }}

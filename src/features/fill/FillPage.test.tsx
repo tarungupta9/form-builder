@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { newTemplateId } from '../../domain/ids';
 import type { FormResponse } from '../../domain/response';
 import type { FormTemplate } from '../../domain/template';
+import { deleteTemplate } from '../../storage/deleteTemplate';
 import { STORAGE_KEYS, createRepositories } from '../../storage/repositories';
 import { template, textField } from '../../test/fixtures';
 import { expectNoAxeViolations } from '../../test/axe';
@@ -179,12 +180,13 @@ describe('Fill page', () => {
     await user.type(await screen.findByRole('textbox', { name: 'Notes' }), 'Typed');
 
     changeInAnotherTab(() => {
-      createRepositories(localStorage).templates.remove([form.id]);
+      deleteTemplate(createRepositories(localStorage), form.id);
     });
     await user.click(screen.getByRole('button', { name: 'Submit response' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('This form was deleted');
     expect(screen.getByRole('textbox', { name: 'Notes' })).toHaveValue('Typed');
+    // The deletion took the draft with it, and no later autosave brings it back (D-22, D-23).
     expect(storedResponses()).toEqual([]);
   });
 

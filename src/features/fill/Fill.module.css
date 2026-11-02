@@ -49,3 +49,9 @@
   gap: var(--space-3);
   padding-top: var(--space-2);
 }
+
+/* A notice above the form, such as "This form has changed since you started". */
+.formNotice {
+  max-width: 720px;
+  margin-bottom: var(--space-5);
+}

@@ -222,7 +222,8 @@ describe('Fill: conditional required', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Enter an answer for Receipt number',
     );
-    expect(storedResponses()).toHaveLength(0);
+    // Typing saved a draft (D-23); nothing was submitted.
+    expect(storedResponses().filter((stored) => stored.status === 'submitted')).toHaveLength(0);
 
     await user.type(receiptBox()!, 'R-1001');
     await user.click(screen.getByRole('button', { name: 'Submit response' }));

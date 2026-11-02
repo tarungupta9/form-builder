@@ -4,7 +4,7 @@ import { QUARANTINE_PREFIX } from '../../storage/collection';
 import { STORAGE_KEYS, createRepositories } from '../../storage/repositories';
 import { renderApp } from '../../test/renderApp';
 import { settleAnnouncements, startFakeClock } from '../../test/timers';
-import { submittedResponse, template, textField } from '../../test/fixtures';
+import { draftResponse, submittedResponse, template, textField } from '../../test/fixtures';
 import { toIsoDateTime } from '../../domain/ids';
 
 describe('Templates page', () => {
@@ -142,6 +142,24 @@ describe('Templates page', () => {
     expect(card('Leave request').getByText('0 responses')).toBeInTheDocument();
   });
 
+  it('counts drafts apart on the card: "2 responses · 1 in progress"', async () => {
+    const repositories = createRepositories(localStorage);
+    const claim = template([textField('Name')], 'Expense claim');
+    const leave = template([textField('Dates')], 'Leave request');
+    repositories.templates.put(claim);
+    repositories.templates.put(leave);
+    repositories.responses.put(submittedResponse(claim));
+    repositories.responses.put(submittedResponse(claim));
+    repositories.responses.put(draftResponse(claim));
+    repositories.responses.put(draftResponse(leave));
+
+    await renderApp('/');
+
+    const card = (name: string) => within(screen.getByRole('heading', { name }).closest('li')!);
+    expect(card('Expense claim').getByText('2 responses · 1 in progress')).toBeInTheDocument();
+    expect(card('Leave request').getByText('0 responses · 1 in progress')).toBeInTheDocument();
+  });
+
   it('opens a new response from the card', async () => {
     const saved = template([textField('Name')], 'Expense claim');
     createRepositories(localStorage).templates.put(saved);
@@ -220,6 +238,32 @@ describe('Deleting a template (D-22)', () => {
     ).toBeVisible();
     expect(dialog.getByRole('button', { name: 'Delete template and 3 responses' })).toBeVisible();
     expect(dialog.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  });
+
+  it('counts responses in progress in the question and on the button (D-23)', async () => {
+    const { travel, books } = seed(2);
+    repositories().responses.put(draftResponse(travel));
+    repositories().responses.put(draftResponse(books));
+    const { user } = await renderApp('/');
+
+    await user.click(deleteButton('Travel'));
+    const travelDialog = deleteDialog('Travel');
+    expect(
+      travelDialog.getByText(
+        'Its 2 responses and 1 in progress will be deleted too. This can’t be undone.',
+      ),
+    ).toBeVisible();
+    expect(
+      travelDialog.getByRole('button', { name: 'Delete template and 3 responses' }),
+    ).toBeVisible();
+    await user.click(travelDialog.getByRole('button', { name: 'Cancel' }));
+
+    await user.click(deleteButton('Books'));
+    expect(
+      deleteDialog('Books').getByText(
+        'Its 1 response in progress will be deleted too. This can’t be undone.',
+      ),
+    ).toBeVisible();
   });
 
   it('says so when a template has no responses', async () => {

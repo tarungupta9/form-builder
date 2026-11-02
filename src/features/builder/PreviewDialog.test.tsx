@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import { createRepositories } from '../../storage/repositories';
 import {
@@ -11,6 +11,7 @@ import {
   textField,
 } from '../../test/fixtures';
 import { renderApp } from '../../test/renderApp';
+import { AUTOSAVE_DELAY_MS } from '../fill/useDraftAutosave';
 import { settleAnnouncements, startFakeClock } from '../../test/timers';
 
 const preview = () => within(screen.getByRole('dialog', { name: /^Preview:/ }));
@@ -99,6 +100,29 @@ describe('Preview', () => {
     expect(notice).toHaveFocus();
     expect(preview().getByText(/Nothing was saved/)).toBeInTheDocument();
     expect(everyStoredKey()).toEqual(before);
+  });
+
+  // ADR 0016 / 0019: autosave lives in Fill's session, never in the form Preview shares.
+  it('never writes a draft while typing, after the autosave delay, or when the page is hidden', async () => {
+    startFakeClock();
+    try {
+      const form = seedClaim();
+      const { user } = await renderApp(`/templates/${form.id}/edit`, {
+        advanceTimers: vi.advanceTimersByTime,
+      });
+      const before = everyStoredKey();
+      await openPreview(user);
+
+      await user.type(preview().getByRole('textbox', { name: /^Amount/ }), '60');
+      await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS * 2));
+      act(() => {
+        window.dispatchEvent(new Event('pagehide'));
+      });
+
+      expect(everyStoredKey()).toEqual(before);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('starts again with an empty form', async () => {

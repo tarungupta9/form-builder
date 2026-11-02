@@ -17,6 +17,7 @@ import {
 import type {
   ChoiceValue,
   DateValue,
+  DraftResponse,
   FileMeta,
   FilesValue,
   MultiValue,
@@ -211,6 +212,28 @@ export const submittedResponse = (
     // A copy, as at submit, so editing the template afterwards leaves the snapshot alone.
     snapshot: { title: form.title, description: form.description, fields: [...form.fields] },
     answers,
+    ...overrides,
+  };
+};
+
+/**
+ * A response in progress to `form`, with the raw `values` typed so far, saved against the
+ * template as it is now unless `overrides` says otherwise (D-23).
+ */
+export const draftResponse = (
+  form: FormTemplate,
+  values: ResponseValues = {},
+  overrides: Partial<DraftResponse> = {},
+): DraftResponse => {
+  const at = toIsoDateTime(new Date('2026-11-01T09:00:00Z'));
+  return {
+    status: 'draft',
+    id: newResponseId(),
+    templateId: form.id,
+    values,
+    templateUpdatedAt: form.updatedAt,
+    createdAt: at,
+    updatedAt: at,
     ...overrides,
   };
 };

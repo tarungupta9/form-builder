@@ -206,7 +206,7 @@ scripts/
 | `/templates/:templateId/edit` | Builder | not found, storage error |
 | `/templates/:templateId/responses` | Responses list: in-progress drafts, then submitted responses, newest first, each with _Re-download PDF_ **(v0.3; drafts v0.10)** | empty, not found, storage error, items set aside |
 | `/templates/:templateId/respond` | Fill mode with an unsaved draft. On first input, the URL is replaced with the draft's URL (D-23). | not found, template has no fields, storage error |
-| `/templates/:templateId/responses/:responseId` | Fill mode for a saved draft (resume). A submitted response opens read-only. **(v0.10)** | not found, template deleted, template changed since the draft started |
+| `/templates/:templateId/responses/:responseId` | Fill mode for a saved draft (resume). A submitted response opens read-only, drawn by `ResponseDocument` with _Re-download PDF_. The same page component as `respond`, so the first input's URL swap keeps the form mounted; submitting also moves here (ADR 0019). **(v0.10)** | not found (unknown ID, or a response of another template), template changed since the draft started |
 | `*` | Not found | — |
 
 `localStorage` reads are synchronous, so these views never show a "loading" state. The async work that does show progress is PDF preparation, which gets a busy state on the button.
@@ -507,7 +507,7 @@ holds(c) = predicate is complete && target is non-empty && predicate(c, effectiv
 ### 5.4 Fill runtime hook
 
 ```ts
-function useFormRuntime(template: FormTemplate): {   // a DraftResponse argument joins in v0.10
+function useFormRuntime(template: FormTemplate, start?: FormStart): {   // FormStart: response ID, opened-at, stored values (v0.10, ADR 0019)
   values: ResponseValues;                     // raw input, hidden fields included (D-9)
   evaluation: FormEvaluation;                 // graph memoised on template.fields
   issues: ReadonlyMap<FieldId, string>;       // first problem per field, in form order; empty until the first submit attempt

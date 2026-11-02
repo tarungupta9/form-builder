@@ -67,3 +67,25 @@ export function SubmittedNotice({ response, onFillAnother }: SubmittedNoticeProp
     </section>
   );
 }
+
+/**
+ * Above a resumed draft whose template has been saved since (D-23). The draft is shown against
+ * the form as it is now, so answers to removed questions or options are cleared; this says why
+ * an answer the respondent remembers giving may be missing.
+ */
+export function TemplateChangedNotice() {
+  return (
+    <section
+      className={`${styles.notice} ${styles.formNotice}`}
+      aria-labelledby="template-changed-title"
+    >
+      <h2 id="template-changed-title" className={styles.noticeTitle}>
+        This form has changed since you started
+      </h2>
+      <p>
+        Answers to questions or options that were removed have been cleared. Check your answers
+        before you submit.
+      </p>
+    </section>
+  );
+}
