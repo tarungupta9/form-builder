@@ -362,6 +362,7 @@ describe('Builder', () => {
     await user.click(screen.getByRole('button', { name: 'Remove Cash' }));
     const dialog = within(screen.getByRole('dialog', { name: 'Remove Cash?' }));
     expect(dialog.getByRole('listitem')).toHaveTextContent('Receipt number: 1 required condition');
+    await expectNoAxeViolations(document.body);
     await user.click(dialog.getByRole('button', { name: 'Remove option and conditions' }));
 
     expect(screen.getByRole('textbox', { name: 'Option 1 label' })).toHaveFocus();
@@ -433,6 +434,31 @@ describe('Builder', () => {
     await renderApp('/templates/not-an-id/edit');
 
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+  });
+
+  it('has no axe violations when empty, with the details dialog open, and with Save blocked', async () => {
+    const { user, container } = await renderApp('/templates/new');
+    await expectNoAxeViolations(container);
+
+    await user.click(screen.getByRole('button', { name: 'Edit title and description' }));
+    await expectNoAxeViolations(document.body);
+    await user.click(within(detailsDialog()).getByRole('button', { name: 'Cancel' }));
+
+    await user.click(screen.getByRole('button', { name: 'Add Short text' }));
+    await user.click(screen.getByRole('button', { name: 'Add Number' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('alert')).toBeVisible();
+    // Let the live region speak first, so its update never lands while axe is running.
+    await waitFor(() => {
+      expect(screen.getByTestId('live-region')).toHaveTextContent('Number added');
+    });
+    await expectNoAxeViolations(container);
+  });
+
+  it('has no axe violations on Not found', async () => {
+    const { container } = await renderApp('/templates/not-an-id/edit');
+    await screen.findByRole('heading', { name: 'Page not found' });
+    await expectNoAxeViolations(container);
   });
 
   it('re-renders only the edited field’s canvas item while the author types its label', async () => {

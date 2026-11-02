@@ -151,6 +151,7 @@ describe('Responses page', () => {
         expect(
           discardDialog().getByText('Its answers will be deleted. This can’t be undone.'),
         ).toBeVisible();
+        await expectNoAxeViolations(document.body);
         await user.click(discardDialog().getByRole('button', { name: 'Discard response' }));
 
         expect(storedIds()).toEqual([older.id]);
@@ -287,11 +288,12 @@ describe('Responses page', () => {
     });
   });
 
-  it('has no axe violations when empty and when listing responses', async () => {
+  it('has no axe violations when empty and when listing responses and drafts', async () => {
     const empty = template([textField('Name')], 'Empty');
     const full = template([textField('Name')], 'Full');
     save(empty);
     save(full, submittedResponse(full), submittedResponse(full));
+    createRepositories(localStorage).responses.put(draftResponse(full));
 
     const first = await renderApp(`/templates/${empty.id}/responses`);
     await screen.findByRole('heading', { name: 'No responses yet' });
@@ -300,6 +302,7 @@ describe('Responses page', () => {
 
     const second = await renderApp(`/templates/${full.id}/responses`);
     await screen.findByRole('heading', { name: '2 submitted responses' });
+    expect(screen.getByRole('list', { name: 'In progress' })).toBeVisible();
     await expectNoAxeViolations(second.container);
   });
 });

@@ -6,7 +6,7 @@
  * The contract grows with the app, one capability per slice: v0.1 covered what the builder and
  * storage need, v0.2 added filling in and validating answers, v0.3 added `toExport`, how a
  * field reads in the PDF and the on-screen record of a submitted response, v0.6 added
- * `conditionTarget`, how another field's condition reads this one, and v0.9 adds the optional
+ * `conditionTarget`, how another field's condition reads this one, and v0.9 added the optional
  * `derivation`, for a field whose value is computed from other fields (ADR 0018).
  *
  * Methods are declared with method syntax on purpose. TypeScript checks method parameters

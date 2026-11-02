@@ -96,7 +96,7 @@ const submittedSchema = z
     checkAnswersFitSnapshot(response.snapshot.fields, response.answers, ctx);
   });
 
-/** Drafts are written from v0.10; their shape is fixed now so stored data never needs migrating. */
+/** Drafts were written from v0.10, but their shape was fixed in v0.1, so stored data never needed migrating. */
 export const responseSchema: z.ZodType<FormResponse> = z.discriminatedUnion('status', [
   draftSchema,
   submittedSchema,

@@ -16,7 +16,7 @@ function storedIds() {
   };
 }
 
-/** Drafts arrive in v0.10, but the cascade already removes them. */
+/** A response in progress, which the cascade removes along with the submitted ones (D-23). */
 function draftOf(form: FormTemplate): DraftResponse {
   const { id, createdAt } = submittedResponse(form);
   return {

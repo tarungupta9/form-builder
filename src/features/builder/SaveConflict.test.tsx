@@ -5,6 +5,7 @@ import type { FormTemplate } from '../../domain/template';
 import { STORAGE_KEYS, createRepositories } from '../../storage/repositories';
 import { template, textField } from '../../test/fixtures';
 import { renderApp } from '../../test/renderApp';
+import { expectNoAxeViolations } from '../../test/axe';
 
 const repositories = () => createRepositories(localStorage);
 const conflictDialog = () =>
@@ -69,6 +70,11 @@ describe('Saving after another tab changed the template (HLD §4.5)', () => {
 
     expect(conflictDialog().getByText(/It was saved in another tab at/)).toBeVisible();
     expect(conflictDialog().getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    // Let the live region speak first, so its update never lands while axe is running.
+    await waitFor(() => {
+      expect(screen.getByTestId('live-region')).toHaveTextContent('Short text added');
+    });
+    await expectNoAxeViolations(document.body);
     await user.click(conflictDialog().getByRole('button', { name: 'Cancel' }));
 
     expect(stored(form.id)).toEqual(theirs);

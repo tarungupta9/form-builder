@@ -3,6 +3,7 @@ import type { UserEvent } from '@testing-library/user-event';
 import { createRepositories } from '../../storage/repositories';
 import { template, textField } from '../../test/fixtures';
 import { renderApp } from '../../test/renderApp';
+import { expectNoAxeViolations } from '../../test/axe';
 
 const leaveDialog = () => within(screen.getByRole('dialog', { name: 'Leave without saving?' }));
 const allTemplates = () => screen.getByRole('link', { name: 'All templates' });
@@ -36,6 +37,7 @@ describe('Unsaved changes (D-21)', () => {
     ).toBeVisible();
     expect(leaveDialog().getByRole('button', { name: 'Stay' })).toHaveFocus();
     expect(router.state.location.pathname).toBe(`/templates/${form.id}/edit`);
+    await expectNoAxeViolations(document.body);
   });
 
   it('keeps the edits after Stay, and returns focus to the link', async () => {

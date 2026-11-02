@@ -1,10 +1,10 @@
 # Form Builder — High-Level Design
 
-- **Status:** Draft, in review. Q-1, Q-3 and Q-5 are resolved. Implementation follows [`implementation-plan.md`](implementation-plan.md), slice by slice.
-- **Date:** 2026-10-31 (updated 2026-11-01)
+- **Status:** Accepted, and built as v1.0. Every open question (Q-1 to Q-5) is resolved. D-33 was cut for time (see the README's "With more time"). Implementation followed [`implementation-plan.md`](implementation-plan.md), slice by slice.
+- **Date:** 2026-10-31 (updated 2026-11-02)
 - **Source:** _Form Builder — Frontend Take-Home Assignment_ (PDF)
 
-This document sets out the shape of the system before any code is written: what we are building, how the pieces fit, how data is modelled and stored, the interfaces between modules, and what we optimise for. Decisions marked **D-n** become ADRs in `docs/decisions/` once approved. Questions marked **Q-n** are still open, and each one has a recommendation.
+This document sets out the shape of the system before any code is written: what we are building, how the pieces fit, how data is modelled and stored, the interfaces between modules, and what we optimise for. Decisions marked **D-n** become ADRs in `docs/decisions/` once approved. Questions marked **Q-n** were open at review time; §11 records how each was resolved.
 
 ---
 
@@ -90,7 +90,7 @@ The spec asks us to decide the ambiguous 10–20% ourselves and to document the 
 | D-22 | Deleting a template | Supported, with a confirmation that states how many submitted and in-progress responses will be deleted along with it. |
 | D-23 | Drafts, refresh during filling, and resuming later **(Q-3, resolved)** | _New Response_ opens `/templates/:id/respond` with a draft held in memory. On the user's **first input** the draft is saved and the URL is replaced with the draft's own URL, then it autosaves with a debounce. A pre-filled date does not count as input, so abandoned clicks leave nothing behind. Drafts are listed under **In progress** on the responses page (last edited, _Resume_, _Discard_ with confirmation), and the card shows "12 responses · 2 in progress". Submitted counts and the submitted list stay as the spec defines them. A resumed draft is evaluated against the **current** template: values for deleted fields or options count as empty, and a notice says the form changed since the draft was started. Only submitted responses export to PDF, because the PDF carries a submission timestamp. | Saving drafts protects input from a refresh, but a draft nothing links to is lost in practice and stays in storage forever. Listing drafts is what makes resuming possible. |
 | D-32 | Template description | An optional plain-text description (up to 500 characters; empty string means none). It shows on the card (clamped to two lines, omitted when empty), under the title in Fill mode, and in the PDF header when set. It is part of the response snapshot (D-10). It is edited, with the title, in a dialog opened from the edit button beside the builder's heading ([ADR 0009](decisions/0009-template-details-in-a-dialog.md)). | It tells the respondent what the form is for and helps tell templates apart. Plain text avoids rendering user markup. |
-| D-33 | Builder work lost to a crash or a closed tab | Unsaved builder edits are mirrored, debounced, to a recovery copy. Reopening the builder when a copy is newer than the saved template offers _Restore_ or _Discard_. _Save_ clears the copy. A never-saved template is kept under the key `new`, so one unsaved new template can be recovered at a time. Lower priority: built in the polish phase if time allows. | D-21 only warns on navigation. _Save_ stays the explicit step that changes the template others fill in, so recovery never edits the real template. |
+| D-33 | Builder work lost to a crash or a closed tab | Unsaved builder edits are mirrored, debounced, to a recovery copy. Reopening the builder when a copy is newer than the saved template offers _Restore_ or _Discard_. _Save_ clears the copy. A never-saved template is kept under the key `new`, so one unsaved new template can be recovered at a time. Lower priority, so it was the designated cut: **not built (cut at v1.0)**; listed under "With more time" in the README. | D-21 only warns on navigation. _Save_ stays the explicit step that changes the template others fill in, so recovery never edits the real template. |
 | D-34 | Saving a template with no title | Not allowed: _Save_ shows "Give the form a title." | The title heads the card, the Fill page and the PDF, which the spec requires to carry it. A blank one would leave all three without a name. |
 | D-35 | Saving a field with no label | Not allowed: _Save_ shows "Give this field a label." on that field. | Respondents, screen readers and the PDF all need the field's words. This matches how other config errors already block _Save_. |
 
@@ -109,7 +109,7 @@ The spec asks us to decide the ambiguous 10–20% ourselves and to document the 
 | Drag and drop | `@dnd-kit/sortable`, which has a keyboard sensor and screen-reader announcements, **plus** move up/down buttons | Native HTML5 DnD, which is not keyboard accessible | D-28, [ADR 0016](decisions/0016-drag-and-drop-reordering.md) |
 | Styling | CSS Modules + design tokens as CSS custom properties | Tailwind, which gets noisy in JSX the reviewer has to read | [0005](decisions/0005-css-modules-and-tokens.md) (D-29) |
 | PDF | Print-optimised document in a hidden iframe → `print()` **(Q-2, resolved)** | A hand-written PDF byte generator | [0011](decisions/0011-pdf-through-the-print-dialog.md) (D-30) |
-| Testing | Vitest + Testing Library + user-event, with `axe-core` run directly (`axe.run`; colour contrast is checked by hand, since jsdom does no layout). One Playwright smoke test (optional). | Jest, which is slower and needs extra config under Vite | [0006](decisions/0006-vitest-and-testing-library.md) (D-31) |
+| Testing | Vitest + Testing Library + user-event, with `axe-core` run directly (`axe.run`; colour contrast is checked by hand, since jsdom does no layout). A Playwright smoke test was optional and was cut at v1.0. | Jest, which is slower and needs extra config under Vite | [0006](decisions/0006-vitest-and-testing-library.md) (D-31) |
 | Lint | ESLint (`typescript-eslint` strict, `jsx-a11y`, `react-hooks`) + Prettier | — | — |
 
 ### 3.2 Layers
@@ -376,7 +376,7 @@ Tagging each value with its `kind` lets the engine and the PDF narrow it safely,
 ```
 formBuilder:v1:templates   →  { schemaVersion: 1, items: Record<TemplateId, FormTemplate> }
 formBuilder:v1:responses   →  { schemaVersion: 1, items: Record<ResponseId, FormResponse> }
-formBuilder:v1:recovery    →  { schemaVersion: 1, items: Record<TemplateId | 'new', FormTemplate> }   // D-33 (v1.0, if time allows)
+formBuilder:v1:recovery    →  { schemaVersion: 1, items: Record<TemplateId | 'new', FormTemplate> }   // D-33: cut at v1.0, not built
 ```
 
 | Choice | Reasoning |
@@ -618,7 +618,7 @@ The goal is correctness first. Each of these is cheap and has a measurable reaso
 | Rules evaluation per keystroke | The dependency graph and topological order are memoised per template (in Fill, and separately in the builder). `evaluateForm` is O(fields + conditions); it returns new sets on every call, which is fine because the field wrappers below receive booleans, not the sets. |
 | Re-renders while typing | A shared `FillField` wrapper is `React.memo`'d and receives the field, its raw answer, `required`, `error` and the stable `setValue`; it binds the field ID and calls the plugin's `readValue` inside, so no plugin renderer needs memoising. A keystroke re-renders the edited field and any field whose state changed, not the whole form. |
 | Storage reads | Repositories keep a parsed in-memory cache. `useSyncExternalStore` snapshots are referentially stable. The cache is invalidated on write and on the `storage` event, and nothing calls `JSON.parse` during render. |
-| Storage writes | Draft autosave starts on first input, is debounced (about 400 ms) and is flushed on `pagehide` and `visibilitychange`. Templates are saved only on an explicit _Save_; the builder's recovery copy (D-33) uses the same debounce and flush. |
+| Storage writes | Draft autosave starts on first input, is debounced (about 400 ms) and is flushed on `pagehide` and `visibilitychange`. Templates are saved only on an explicit _Save_; the builder's recovery copy (D-33, cut at v1.0) would use the same debounce and flush. |
 | Bundle | Routes are code-split with `React.lazy` (from v0.8, [ADR 0017](decisions/0017-route-code-splitting.md)): the home page loads with the app, and dnd-kit loads only in the builder and the print view only on export. The dependency budget is kept small: react-router, zod, dnd-kit. |
 | Builder canvas | The config panel only renders the selected field's editor, and canvas items render compact summaries rather than full field previews. |
 | Not doing | List virtualisation (forms will have well under 200 fields), web workers, or IndexedDB. These are noted as the scaling path in the README. |
@@ -637,7 +637,7 @@ Tests are named by user scenario and assert on observable behaviour (see `AGENTS
 | Storage | round-trips a template · quarantines corrupt JSON instead of wiping · migrates v0 → v1 · surfaces quota errors |
 | Builder reducer | removing a field strips the conditions and calculation sources that reference it · moving a field keeps the selection |
 | Field components | each renderer is queried by role and label · single select behaves identically in all three displays (parameterised test) |
-| Feature flows | build → save → refresh → fill → submit → appears in the responses list · submit with missing required shows the error summary with focus · opening _New Response_ and leaving without input saves no draft · a started draft appears under In progress and resumes with its values · a resumed draft whose option was deleted treats that answer as empty · the builder offers to restore unsaved edits after a reload |
+| Feature flows | build → save → refresh → fill → submit → appears in the responses list · submit with missing required shows the error summary with focus · opening _New Response_ and leaving without input saves no draft · a started draft appears under In progress and resumes with its values · a resumed draft whose option was deleted treats that answer as empty |
 | Export | `toExportModel` omits hidden fields, keeps form order, and formats files as metadata with a footnote |
 | a11y | `axe-core` (`axe.run`) on each page in its key states; colour contrast checked by hand |
 
@@ -649,12 +649,12 @@ Delivery follows [`implementation-plan.md`](implementation-plan.md): eleven thin
 
 ---
 
-## 11. Open questions for review
+## 11. Open questions (all resolved)
 
-| # | Question | Recommendation |
+| # | Question | Resolution |
 | --- | --- | --- |
 | **Q-1** | How should multiple conditions combine? | **Resolved (D-1):** one flat group per effect, each with its own `all \| any` (default `all`), with hide-beats-show and require-beats-unrequire for conflicts. Nested groups are deferred. |
 | **Q-2** | PDF approach | **Resolved (D-30, ADR 0011):** A, a print document + `print()`, rendered by the same `ResponseDocument` view that shows a response on screen. B (hand-written PDF bytes) is under "with more time". |
 | **Q-3** | Persist drafts while filling? | **Resolved (D-23):** yes, because we don't want to lose data. Drafts are saved on first input, autosaved, and listed under In progress so they can be resumed. |
-| **Q-4** | Condition targets: any field, or only fields above? | Any field except itself, with cycle prevention. "Only fields above" removes cycles by construction, but reordering can then invalidate conditions. |
+| **Q-4** | Condition targets: any field, or only fields above? | **Resolved (v0.6, ADR 0014):** any field except itself, with cycle prevention: a field that already depends on this one is listed but disabled. "Only fields above" removes cycles by construction, but reordering can then invalidate conditions. |
 | **Q-5** | Library set | **Resolved (v0.1):** react-router, zod and @dnd-kit, with no state or UI library and CSS Modules for styling (ADRs 0001–0006). |

@@ -11,6 +11,7 @@ import {
   textField,
 } from '../../test/fixtures';
 import { renderApp } from '../../test/renderApp';
+import { expectNoAxeViolations } from '../../test/axe';
 import { AUTOSAVE_DELAY_MS } from '../fill/useDraftAutosave';
 import { settleAnnouncements, startFakeClock } from '../../test/timers';
 
@@ -84,6 +85,11 @@ describe('Preview', () => {
 
     expect(await preview().findByRole('alert')).toHaveTextContent('Receipt number');
     expect(preview().queryByRole('heading', { name: 'Preview submitted' })).not.toBeInTheDocument();
+    // Let the live region speak first, so its update never lands while axe is running.
+    await waitFor(() => {
+      expect(preview().getByTestId('live-region')).toHaveTextContent('Receipt number shown');
+    });
+    await expectNoAxeViolations(document.body);
   });
 
   it('says nothing was saved after a valid submit, and writes nothing to storage', async () => {

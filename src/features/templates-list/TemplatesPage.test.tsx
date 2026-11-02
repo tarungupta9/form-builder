@@ -6,6 +6,7 @@ import { renderApp } from '../../test/renderApp';
 import { settleAnnouncements, startFakeClock } from '../../test/timers';
 import { draftResponse, submittedResponse, template, textField } from '../../test/fixtures';
 import { toIsoDateTime } from '../../domain/ids';
+import { expectNoAxeViolations } from '../../test/axe';
 
 describe('Templates page', () => {
   it('shows the empty state when there are no templates', async () => {
@@ -193,6 +194,30 @@ describe('Templates page', () => {
     expect(screen.getByRole('button', { name: 'Start again with no responses' })).toBeVisible();
     expect(localStorage.getItem(STORAGE_KEYS.responses)).toBe('{bad');
   });
+
+  it('has no axe violations when empty, with cards and a set-aside notice, and on a storage error', async () => {
+    const empty = await renderApp('/');
+    await screen.findByRole('heading', { name: 'Create your first template' });
+    await expectNoAxeViolations(empty.container);
+    empty.unmount();
+
+    const form = template([textField('Name')], 'Expense claim');
+    localStorage.setItem(
+      STORAGE_KEYS.templates,
+      JSON.stringify({ schemaVersion: 1, items: { [form.id]: form, broken: { title: 7 } } }),
+    );
+    createRepositories(localStorage).responses.put(submittedResponse(form));
+    createRepositories(localStorage).responses.put(draftResponse(form));
+    const cards = await renderApp('/');
+    await screen.findByRole('heading', { name: 'Expense claim' });
+    await expectNoAxeViolations(cards.container);
+    cards.unmount();
+
+    localStorage.setItem(STORAGE_KEYS.templates, '{bad');
+    const failed = await renderApp('/');
+    await screen.findByRole('heading', { name: 'Your saved data could not be read' });
+    await expectNoAxeViolations(failed.container);
+  });
 });
 
 describe('Deleting a template (D-22)', () => {
@@ -238,6 +263,7 @@ describe('Deleting a template (D-22)', () => {
     ).toBeVisible();
     expect(dialog.getByRole('button', { name: 'Delete template and 3 responses' })).toBeVisible();
     expect(dialog.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await expectNoAxeViolations(document.body);
   });
 
   it('counts responses in progress in the question and on the button (D-23)', async () => {
