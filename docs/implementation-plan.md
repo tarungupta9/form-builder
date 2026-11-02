@@ -1,6 +1,6 @@
 # Implementation Plan — Verified Slices
 
-- **Status:** Agreed. v0.1–v0.8 signed off; v0.9 and v0.10 are next, built in parallel (see the [tracker](#6-progress-tracker)).
+- **Status:** Agreed. v0.1–v0.10 signed off; v1.0 is next (see the [tracker](#6-progress-tracker)).
 - **Date:** 2026-11-01
 - **Replaces:** the layer-by-layer delivery plan in [high-level-design.md §10](high-level-design.md#10-delivery-plan).
 
@@ -390,8 +390,8 @@ Update this table at each sign-off.
 | v0.6    | Conditional visibility                  | Signed off  | 2026-11-02 | ADR 0014 (D-1, D-2, D-4–D-9, Q-4, D6-2, D6-13). First commit fixes the flaky suite. Contract gains `conditionTarget` (D6-1); config issues carry a control ID (D6-12)                                                                                                                                                 |
 | v0.7    | Conditional required and safe editing   | Signed off  | 2026-11-02 | ADR 0015 (D-12, option deletion, warnings channel); amends ADR 0014 (require axis, D-3 corrected, D6-2 superseded). First commit drives the flow tests' timers with a fake clock                                                                                                                                      |
 | v0.8    | Builder workflow                        | Signed off  | 2026-11-02 | ADR 0016 (D-28, D8-1 to D8-3) and ADR 0017 (route code-splitting, pulled in from v1.0 by the owner). First commit makes `renderApp` async. README rows for D-21, D-22 and the cross-tab warning                                                                                                                       |
-| v0.9    | Calculation and file upload             | In review   | —          | ADR 0018 (calculation seam). First commit is the seam alone, so `check:seam` against it lists only the field-type half                                                                                                                                                                                                |
-| v0.10   | Drafts and resume                       | In review   | —          | ADR 0019 (D-23). Submitted responses keep the draft’s ID; their URL opens read-only via `ResponseDocument`                                                                                                                                                                                                            |
+| v0.9    | Calculation and file upload             | Signed off  | 2026-11-02 | ADR 0018 (calculation seam). First commit is the seam alone, so `check:seam` against it lists only the field-type half                                                                                                                                                                                                |
+| v0.10   | Drafts and resume                       | Signed off  | 2026-11-02 | ADR 0019 (D-23). Submitted responses keep the draft’s ID; their URL opens read-only via `ResponseDocument`                                                                                                                                                                                                            |
 | v1.0    | Polish and submission                   | Not started | —          |                                                                                                                                                                                                                                                                                                                       |
 
 ---
