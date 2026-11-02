@@ -19,6 +19,7 @@ describe('Date renderer', () => {
         required={false}
         error={null}
         controlId="answer"
+        context={{ fields: [] }}
         onChange={vi.fn()}
       />,
     );
@@ -41,6 +42,7 @@ describe('Date renderer', () => {
         required={false}
         error={null}
         controlId="answer"
+        context={{ fields: [] }}
         onChange={onChange}
       />,
     );

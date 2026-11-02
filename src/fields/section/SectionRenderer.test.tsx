@@ -18,6 +18,7 @@ describe('Section header renderer', () => {
         required={false}
         error={null}
         controlId="answer"
+        context={{ fields: [] }}
         onChange={vi.fn()}
       />,
     );

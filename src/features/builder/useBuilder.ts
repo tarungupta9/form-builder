@@ -2,6 +2,7 @@ import { useCallback, useMemo, useReducer } from 'react';
 import { toIsoDateTime } from '../../domain/ids';
 import { buildDependencyGraph } from '../../domain/rules/graph';
 import type { FormTemplate } from '../../domain/template';
+import { fieldDerivations } from '../../fields/registry';
 import { useRepositories } from '../../storage/StorageContext';
 import type { Repositories } from '../../storage/repositories';
 import type { StorageError } from '../../storage/result';
@@ -42,7 +43,10 @@ interface SaveOptions {
 export function useBuilder(initial: FormTemplate, { isNew }: { isNew: boolean }) {
   const { templates } = useRepositories();
   const [state, dispatch] = useReducer(builderReducer, initial, initialBuilderState);
-  const graph = useMemo(() => buildDependencyGraph(state.template.fields), [state.template.fields]);
+  const graph = useMemo(
+    () => buildDependencyGraph(state.template.fields, fieldDerivations),
+    [state.template.fields],
+  );
   const issues = useMemo(() => configIssues(state.template, graph), [state.template, graph]);
   const warnings = useMemo(
     () => new Map(state.template.fields.map((field) => [field.id, conditionWarnings(field)])),

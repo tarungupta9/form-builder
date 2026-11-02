@@ -4,7 +4,7 @@ import type { FieldValue, ResponseValues, SubmittedResponse } from '../../domain
 import { evaluateForm } from '../../domain/rules/evaluate';
 import { buildDependencyGraph } from '../../domain/rules/graph';
 import type { Field, FormTemplate } from '../../domain/template';
-import { definitionOf } from '../../fields/registry';
+import { definitionOf, fieldDerivations } from '../../fields/registry';
 import { type ResponseIssues, responseIssues } from './responseIssues';
 import { toSubmittedResponse } from './submission';
 
@@ -37,9 +37,12 @@ export function useFormRuntime(template: FormTemplate) {
   const [values, setValues] = useState<ResponseValues>(start.values);
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
-  const graph = useMemo(() => buildDependencyGraph(template.fields), [template.fields]);
+  const graph = useMemo(
+    () => buildDependencyGraph(template.fields, fieldDerivations),
+    [template.fields],
+  );
   const evaluation = useMemo(
-    () => evaluateForm(template.fields, values, graph),
+    () => evaluateForm(template.fields, values, fieldDerivations, graph),
     [template.fields, values, graph],
   );
   const currentIssues = useMemo(

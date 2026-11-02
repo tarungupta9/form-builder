@@ -14,7 +14,7 @@ import {
   describeReads,
   optionDependantsOf,
   withoutConditionsComparing,
-  withoutConditionsOn,
+  withoutReferencesTo,
 } from './references';
 
 const over50: Predicate = { kind: 'number', op: 'gt', value: 50 };
@@ -65,7 +65,7 @@ describe('dependantsOf', () => {
   });
 });
 
-describe('withoutConditionsOn', () => {
+describe('withoutReferencesTo', () => {
   it('removes conditions on the field from every group and keeps the rest, match included', () => {
     const amount = numberField('Amount');
     const notes = textField('Notes');
@@ -76,7 +76,7 @@ describe('withoutConditionsOn', () => {
     receipt.logic.require = group('any', condition(amount.id, over50));
     receipt.logic.unrequire = group('any', keep, condition(amount.id, over50));
 
-    const cleaned = withoutConditionsOn(receipt, amount.id);
+    const cleaned = withoutReferencesTo(receipt, amount.id);
 
     expect(cleaned.logic).toEqual({
       ...receipt.logic,
@@ -93,8 +93,8 @@ describe('withoutConditionsOn', () => {
     heading.logic.show = group('all', condition(amount.id, over50));
     const notes = textField('Notes');
 
-    expect(withoutConditionsOn(notes, amount.id)).toBe(notes);
-    expect(withoutConditionsOn(heading, amount.id).logic.show).toEqual(group('all'));
+    expect(withoutReferencesTo(notes, amount.id)).toBe(notes);
+    expect(withoutReferencesTo(heading, amount.id).logic.show).toEqual(group('all'));
   });
 });
 

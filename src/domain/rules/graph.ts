@@ -1,8 +1,10 @@
 import type { FieldId } from '../ids';
 import { type Field, groupsOf } from '../template';
+import { type FieldDerivations, NO_DERIVED_FIELDS } from './derivations';
 
 /**
- * Who reads whom. A field reads another when it has a condition on it. Evaluating in
+ * Who reads whom. A field reads another when it has a condition on it, or computes its value
+ * from it (a calculation's sources, ADR 0018). Evaluating in
  * topological order means every field reads targets that are already resolved, which gives
  * correct chaining (A → B → C) in a single pass (D-5).
  */
@@ -15,16 +17,20 @@ export interface DependencyGraph {
   readBy: ReadonlyMap<FieldId, ReadonlySet<FieldId>>;
 }
 
-/** The fields `field` reads through its conditions. */
-function dependenciesOf(field: Field): Set<FieldId> {
-  const reads = new Set<FieldId>();
+/** The fields `field` reads: its condition targets and the sources it is computed from. */
+function dependenciesOf(field: Field, derivations: FieldDerivations): Set<FieldId> {
+  const reads = new Set<FieldId>(derivations.sourcesOf(field));
   for (const { group } of groupsOf(field.logic)) {
     for (const condition of group.conditions) reads.add(condition.targetFieldId);
   }
   return reads;
 }
 
-export function buildDependencyGraph(fields: readonly Field[]): DependencyGraph {
+/** `derivations` comes from the plugin registry (`fieldDerivations`); see `derivations.ts`. */
+export function buildDependencyGraph(
+  fields: readonly Field[],
+  derivations: FieldDerivations = NO_DERIVED_FIELDS,
+): DependencyGraph {
   const known = new Set(fields.map((field) => field.id));
   const reads = new Map<FieldId, Set<FieldId>>();
   const readBy = new Map<FieldId, Set<FieldId>>();
@@ -33,7 +39,7 @@ export function buildDependencyGraph(fields: readonly Field[]): DependencyGraph 
     readBy.set(field.id, new Set());
   }
   for (const field of fields) {
-    for (const target of dependenciesOf(field)) {
+    for (const target of dependenciesOf(field, derivations)) {
       // A reference to a missing field reads nothing. The builder removes such references along
       // with the field (D-12), so only stored or hand-edited data can hold one.
       if (!known.has(target)) continue;

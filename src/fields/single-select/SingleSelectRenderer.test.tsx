@@ -30,6 +30,7 @@ function Harness({ display, required = false, error = null, onChange }: HarnessP
       required={required}
       error={error}
       controlId="answer-payment"
+      context={{ fields: [] }}
       onChange={(next) => {
         setValue(next);
         onChange?.(next);

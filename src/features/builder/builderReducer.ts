@@ -4,13 +4,14 @@
  * keeps the reducer free of randomness and time.
  *
  * Deleting never leaves a broken reference (D-12): removing a field removes the conditions that
- * read it, and removing an option removes the conditions that compare with it. The builder asks
- * the author first; the reducer only makes sure the template it holds is always consistent.
+ * read it and drops it from any calculation's sources, and removing an option removes the
+ * conditions that compare with it. The builder asks the author first; the reducer only makes
+ * sure the template it holds is always consistent.
  */
 import type { FieldId, OptionId } from '../../domain/ids';
-import { withoutConditionsComparing, withoutConditionsOn } from '../../domain/rules/references';
+import { withoutConditionsComparing, withoutReferencesTo } from '../../domain/rules/references';
 import type { Field, FormTemplate } from '../../domain/template';
-import { definitionOf } from '../../fields/registry';
+import { definitionOf, fieldDerivations } from '../../fields/registry';
 
 export interface BuilderState {
   template: FormTemplate;
@@ -114,7 +115,7 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
         template: withFields(
           template.fields
             .filter((field) => field.id !== action.fieldId)
-            .map((field) => withoutConditionsOn(field, action.fieldId)),
+            .map((field) => withoutReferencesTo(field, action.fieldId, fieldDerivations)),
         ),
         selectedFieldId: state.selectedFieldId === action.fieldId ? null : state.selectedFieldId,
       };

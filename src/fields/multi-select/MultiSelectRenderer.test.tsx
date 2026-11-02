@@ -29,6 +29,7 @@ function Harness({
       required={false}
       error={error}
       controlId="answer-types"
+      context={{ fields: [] }}
       onChange={(next) => {
         setValue(next);
         onChange?.(next);

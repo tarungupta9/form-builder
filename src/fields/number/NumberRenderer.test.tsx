@@ -12,6 +12,7 @@ const renderNumber = (config: Partial<NumberConfig>, onChange = vi.fn()) =>
       required={false}
       error={null}
       controlId="answer"
+      context={{ fields: [] }}
       onChange={onChange}
     />,
   );

@@ -1,6 +1,7 @@
 import type { FieldId } from '../ids';
 import type { ResponseValues } from '../response';
 import { type ConditionGroup, type Field, type FieldLogic, hasRequiredAxis } from '../template';
+import { type FieldDerivations, NO_DERIVED_FIELDS } from './derivations';
 import { type DependencyGraph, buildDependencyGraph } from './graph';
 import { predicateHolds } from './predicates';
 
@@ -8,7 +9,10 @@ export interface FormEvaluation {
   visible: ReadonlySet<FieldId>;
   /** Only ever visible fields: a hidden field is never required, whatever its settings. */
   required: ReadonlySet<FieldId>;
-  /** The values conditions see, and the only ones that may be submitted: hidden fields are absent (D-5, D-9). */
+  /**
+   * The values conditions see, and the only ones that may be submitted: hidden fields are
+   * absent (D-5, D-9), and each visible derived field holds its computed value (ADR 0018).
+   */
   effective: ResponseValues;
 }
 
@@ -18,11 +22,16 @@ export interface FormEvaluation {
  *
  * Raw `values` keep what the user typed into fields that are now hidden, so un-hiding a field
  * restores it; only `effective` drops them (D-9).
+ *
+ * A derived field is computed in the same pass: its sources come before it in dependency
+ * order, so it reads their effective values, and a hidden source is already absent (D-14).
+ * Pass the same `derivations` the graph was built with.
  */
 export function evaluateForm(
   fields: readonly Field[],
   values: ResponseValues,
-  graph: DependencyGraph = buildDependencyGraph(fields),
+  derivations: FieldDerivations = NO_DERIVED_FIELDS,
+  graph: DependencyGraph = buildDependencyGraph(fields, derivations),
 ): FormEvaluation {
   const byId = new Map(fields.map((field) => [field.id, field]));
   const visible = new Set<FieldId>();
@@ -51,7 +60,8 @@ export function evaluateForm(
       if (isRequired) required.add(field.id);
     }
 
-    const value = values[field.id];
+    const derived = derivations.derive(field, effective);
+    const value = derived ? derived.value : values[field.id];
     if (value !== undefined) effective[field.id] = value;
   };
 

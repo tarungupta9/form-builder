@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useState } from 'react';
+import { type SyntheticEvent, useMemo, useState } from 'react';
 import type { SubmittedResponse } from '../../domain/response';
 import type { FormTemplate } from '../../domain/template';
 import type { Result } from '../../storage/result';
@@ -30,6 +30,7 @@ export function FillForm({ template, onSubmit }: FillFormProps) {
   const [saveError, setSaveError] = useState<SaveError | null>(null);
   const focusLater = useFocusRequest();
   const visibleFields = template.fields.filter((field) => evaluation.visible.has(field.id));
+  const context = useMemo(() => ({ fields: template.fields }), [template.fields]);
   useFormChangeAnnouncements(template.fields, evaluation, values);
 
   const handleSubmit = (event: SyntheticEvent<HTMLFormElement>) => {
@@ -67,7 +68,10 @@ export function FillForm({ template, onSubmit }: FillFormProps) {
           <FillField
             key={field.id}
             field={field}
-            value={values[field.id]}
+            // Only visible fields are drawn, and for those the effective value is the raw answer
+            // itself (the same object, so the memo holds) or a derived field's result.
+            value={evaluation.effective[field.id]}
+            context={context}
             required={evaluation.required.has(field.id)}
             error={issues.get(field.id) ?? null}
             setValue={setValue}

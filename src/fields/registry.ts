@@ -2,6 +2,7 @@
  * The pure half of the plugin registry: field type → definition. The mapped type makes it
  * exhaustive, so a new member of `FieldTypeMap` without a definition here is a compile error.
  */
+import type { FieldDerivations } from '../domain/rules/derivations';
 import type { Field, FieldType } from '../domain/template';
 import type { FieldDefinition } from './contract';
 import { dateDefinition } from './date/definition';
@@ -37,3 +38,18 @@ export function definitionOf(field: Field): FieldDefinition<FieldType> {
 export function definitionFor(type: FieldType): FieldDefinition<FieldType> {
   return fieldRegistry[type];
 }
+
+/**
+ * The plugins' `derivation` members, in the shape the rules engine takes, so the engine computes
+ * derived values and follows their sources without importing the registry (ADR 0018). Every
+ * caller of the graph, the evaluation and the D-12 references passes this.
+ */
+export const fieldDerivations: FieldDerivations = {
+  sourcesOf: (field) => definitionOf(field).derivation?.sourcesOf(field) ?? [],
+  withoutSource: (field, sourceId) =>
+    definitionOf(field).derivation?.withoutSource(field, sourceId) ?? field,
+  derive: (field, effective) => {
+    const derivation = definitionOf(field).derivation;
+    return derivation ? { value: derivation.derive(field, effective) } : null;
+  },
+};

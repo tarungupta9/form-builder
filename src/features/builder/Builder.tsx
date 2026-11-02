@@ -4,7 +4,7 @@ import { newFieldId } from '../../domain/ids';
 import { dependantsOf } from '../../domain/rules/references';
 import type { FieldId } from '../../domain/ids';
 import type { Field, FieldType, FormTemplate } from '../../domain/template';
-import { definitionFor } from '../../fields/registry';
+import { definitionFor, fieldDerivations } from '../../fields/registry';
 import { KEEP_FOCUS } from '../../app/navigation';
 import type { StorageError } from '../../storage/result';
 import { describeStorageError } from '../../storage/storageMessages';
@@ -123,7 +123,7 @@ export function Builder({ initial, isNew }: BuilderProps) {
       const index = fields.findIndex((candidate) => candidate.id === field.id);
       const neighbour = fields[index + 1] ?? fields[index - 1];
       const focusAfter = neighbour ? canvasItemId(neighbour.id) : 'canvas-title';
-      const dependants = dependantsOf(fields, field.id);
+      const dependants = dependantsOf(fields, field.id, fieldDerivations);
       if (dependants.length > 0) {
         setRemoval({ field, dependants, focusAfter, open: true });
         return;

@@ -15,6 +15,7 @@ describe('Long text renderer', () => {
         required
         error={null}
         controlId="answer"
+        context={{ fields: [] }}
         onChange={vi.fn()}
       />,
     );
@@ -35,6 +36,7 @@ describe('Long text renderer', () => {
         required={false}
         error={null}
         controlId="answer"
+        context={{ fields: [] }}
         onChange={onChange}
       />,
     );

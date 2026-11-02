@@ -1,10 +1,12 @@
 /**
- * Who refers to a field or an option through a condition, and the field once those references
- * are gone. The builder uses these to say what deleting a field or an option takes with it, and
- * then to remove exactly that (D-12). Pure, and blind to field types: options are found in the
- * predicate, never by asking which type the target is.
+ * Who refers to a field or an option, through a condition or as a calculation source, and the
+ * field once those references are gone. The builder uses these to say what deleting a field or
+ * an option takes with it, and then to remove exactly that (D-12). Pure, and blind to field
+ * types: options are found in the predicate, and sources through `FieldDerivations`, never by
+ * asking which type a field is.
  */
 import type { FieldId, OptionId } from '../ids';
+import { type FieldDerivations, NO_DERIVED_FIELDS } from './derivations';
 import {
   type Condition,
   type Effect,
@@ -14,11 +16,14 @@ import {
   mapGroups,
 } from '../template';
 
+/** How a dependant reads the thing being deleted: through one of its condition groups, or as a source. */
+export type ReadKind = Effect | 'source';
+
 /** One field that reads the thing being deleted. */
 export interface Dependant {
   field: Field;
-  /** Which of its groups read it, and how many conditions in each; v0.9 adds calculation sources. */
-  reads: { effect: Effect; count: number }[];
+  /** Which of its groups read it, and how many conditions in each, then whether it is a source. */
+  reads: { effect: ReadKind; count: number }[];
 }
 
 /** The option IDs a comparison names; empty for kinds that have no options. */
@@ -58,15 +63,37 @@ const compares = (fieldId: FieldId, optionIds: readonly OptionId[]) => (conditio
   optionIdsOf(condition.predicate).some((id) => optionIds.includes(id));
 
 /**
- * The fields with a condition on `fieldId`. Direct readers only: a field further down a chain
- * keeps its own conditions, which read a field that stays.
+ * The fields with a condition on `fieldId` or that compute their value from it. Direct readers
+ * only: a field further down a chain keeps its own conditions, which read a field that stays.
  */
-export const dependantsOf = (fields: readonly Field[], fieldId: FieldId): Dependant[] =>
-  dependantsWhere(fields, reads(fieldId));
+export function dependantsOf(
+  fields: readonly Field[],
+  fieldId: FieldId,
+  derivations: FieldDerivations = NO_DERIVED_FIELDS,
+): Dependant[] {
+  const byConditions = new Map(
+    dependantsWhere(fields, reads(fieldId)).map((dependant) => [dependant.field.id, dependant]),
+  );
+  return fields.flatMap((field) => {
+    const conditionReads = byConditions.get(field.id)?.reads ?? [];
+    const sourceReads = derivations.sourcesOf(field).includes(fieldId)
+      ? [{ effect: 'source' as const, count: 1 }]
+      : [];
+    const all = [...conditionReads, ...sourceReads];
+    return all.length > 0 ? [{ field, reads: all }] : [];
+  });
+}
 
-/** Removes every condition on `fieldId`, in every group; each group keeps its `match`. */
-export const withoutConditionsOn = (field: Field, fieldId: FieldId): Field =>
-  without(field, reads(fieldId));
+/**
+ * Removes every reference to `fieldId`: each condition on it, in every group (each group keeps
+ * its `match`), and `fieldId` as a source. A calculation left with no sources then blocks Save
+ * through its own config check (D-12).
+ */
+export const withoutReferencesTo = (
+  field: Field,
+  fieldId: FieldId,
+  derivations: FieldDerivations = NO_DERIVED_FIELDS,
+): Field => derivations.withoutSource(without(field, reads(fieldId)), fieldId);
 
 /** The fields with a condition that compares `fieldId`'s answer with `optionId`. */
 export const optionDependantsOf = (
@@ -86,11 +113,12 @@ export const withoutConditionsComparing = (
   optionIds: readonly OptionId[],
 ): Field => without(field, compares(fieldId, optionIds));
 
-const READ_NOUNS: Record<Effect, string> = {
+const READ_NOUNS: Record<ReadKind, string> = {
   show: 'show condition',
   hide: 'hide condition',
   require: 'required condition',
   unrequire: 'not-required condition',
+  source: 'calculation source',
 };
 
 /** "1 required condition", "2 show conditions and 1 not-required condition". */
@@ -105,4 +133,12 @@ export function describeReads(groups: Dependant['reads']): string {
 
 /** How many conditions a removal takes with it, across every dependant. */
 export const conditionCount = (dependants: readonly Dependant[]): number =>
-  dependants.reduce((sum, { reads }) => sum + reads.reduce((n, { count }) => n + count, 0), 0);
+  dependants.reduce(
+    (sum, { reads }) =>
+      sum + reads.reduce((n, { effect, count }) => (effect === 'source' ? n : n + count), 0),
+    0,
+  );
+
+/** How many calculations lose `fieldId` as a source, across every dependant. */
+export const sourceCount = (dependants: readonly Dependant[]): number =>
+  dependants.filter(({ reads }) => reads.some(({ effect }) => effect === 'source')).length;

@@ -6,7 +6,7 @@
 import type { FieldId } from '../../domain/ids';
 import { type DependencyGraph, buildDependencyGraph } from '../../domain/rules/graph';
 import type { FormTemplate } from '../../domain/template';
-import { definitionOf } from '../../fields/registry';
+import { definitionOf, fieldDerivations } from '../../fields/registry';
 import { CONFIG_IDS } from './configIds';
 import { conditionIssues } from './conditions/conditionIssues';
 
@@ -55,7 +55,7 @@ export function detailsIssues({ title, description }: TemplateDetails) {
 /** `graph` is the template's dependency graph, passed in when the caller already has it. */
 export function configIssues(
   template: FormTemplate,
-  graph: DependencyGraph = buildDependencyGraph(template.fields),
+  graph: DependencyGraph = buildDependencyGraph(template.fields, fieldDerivations),
 ): ConfigIssues {
   const details = detailsIssues(template);
   const form = [details.title, details.description].filter((issue) => issue !== null);

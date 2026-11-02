@@ -1,4 +1,4 @@
-import type { Dependant } from '../../domain/rules/references';
+import { type Dependant, sourceCount } from '../../domain/rules/references';
 import type { Field } from '../../domain/template';
 import { RemovalDialog } from '../../ui/RemovalDialog';
 import { fieldName } from './Canvas';
@@ -24,13 +24,19 @@ interface RemoveFieldDialogProps {
  */
 export function RemoveFieldDialog({ removal, onCancel, onConfirm }: RemoveFieldDialogProps) {
   const name = removal ? fieldName(removal.field) : '';
+  // Calculation sources are references too (ADR 0018); the words only change when one is involved.
+  const usesSources = sourceCount(removal?.dependants ?? []) > 0;
   return (
     <RemovalDialog
       open={removal?.open ?? false}
       title={`Remove ${name}?`}
-      lead={`Other fields have conditions on ${name}. Removing it also removes those conditions:`}
+      lead={
+        usesSources
+          ? `Other fields use ${name}. Removing it also removes those references:`
+          : `Other fields have conditions on ${name}. Removing it also removes those conditions:`
+      }
       dependants={removal?.dependants ?? []}
-      confirmLabel="Remove field and conditions"
+      confirmLabel={usesSources ? 'Remove field and references' : 'Remove field and conditions'}
       fallbackFocusId={removal?.focusAfter ?? 'canvas-title'}
       onCancel={onCancel}
       onConfirm={() => {

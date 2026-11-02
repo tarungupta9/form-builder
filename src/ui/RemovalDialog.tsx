@@ -1,5 +1,5 @@
 import type { Dependant } from '../domain/rules/references';
-import { conditionCount, describeReads } from '../domain/rules/references';
+import { conditionCount, describeReads, sourceCount } from '../domain/rules/references';
 import { ConfirmDialog } from './ConfirmDialog';
 import styles from './Dialog.module.css';
 import { displayLabel } from './FormField';
@@ -52,17 +52,28 @@ export function RemovalDialog({
           </li>
         ))}
       </ul>
-      <p>Their other conditions stay.</p>
+      <p>
+        {sourceCount(dependants) > 0
+          ? 'Their other conditions and sources stay.'
+          : 'Their other conditions stay.'}
+      </p>
     </ConfirmDialog>
   );
 }
 
 /**
  * What was removed along with the thing, for the announcement: "1 condition on Receipt
- * number", "3 conditions on Receipt number and Notes"; from three fields, a count.
+ * number", "3 conditions on Receipt number and Notes", "1 calculation source on Total"; from
+ * three fields, a count.
  */
 export function removedConditions(dependants: readonly Dependant[]): string {
   const names = dependants.map(({ field }) => displayLabel(field.label));
   const where = names.length <= 2 ? names.join(' and ') : plural(names.length, 'field');
-  return `${plural(conditionCount(dependants), 'condition')} on ${where}`;
+  const conditions = conditionCount(dependants);
+  const sources = sourceCount(dependants);
+  const what = [
+    conditions > 0 && plural(conditions, 'condition'),
+    sources > 0 && plural(sources, 'calculation source'),
+  ].filter(Boolean);
+  return `${what.join(' and ')} on ${where}`;
 }
