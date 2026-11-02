@@ -3,6 +3,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   DragOverlay,
+  type KeyboardSensorOptions,
   PointerSensor,
   useSensor,
   useSensors,
@@ -21,6 +22,21 @@ import {
 } from './dragAndDrop';
 import { PaletteChip } from './FieldPalette';
 
+/*
+ * Module constants, not inline objects: dnd-kit rebuilds its sensors, and with them every
+ * draggable's listeners, whenever an options object changes identity.
+ */
+/** A short distance before a drag starts keeps a click a click. */
+const POINTER_OPTIONS = { activationConstraint: { distance: 8 } };
+/**
+ * When the next place is off-centre, the sensor first scrolls the page to it. An instant scroll
+ * means the next arrow key always moves the field, with no animation to wait out.
+ */
+const KEYBOARD_OPTIONS: KeyboardSensorOptions = {
+  coordinateGetter: sortableKeyboardCoordinates,
+  scrollBehavior: 'auto',
+};
+
 interface BuilderDragAndDropProps {
   fields: readonly Field[];
   /** A canvas item was dropped elsewhere in the list. */
@@ -38,14 +54,8 @@ interface BuilderDragAndDropProps {
  */
 export function BuilderDragAndDrop({ fields, onMove, onAdd, children }: BuilderDragAndDropProps) {
   const sensors = useSensors(
-    // A short distance before a drag starts keeps a click a click.
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    // When the next place is off-centre, the sensor first scrolls the page to it. An instant
-    // scroll means the next arrow key always moves the field, with no animation to wait out.
-    useSensor(CanvasKeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-      scrollBehavior: 'auto',
-    }),
+    useSensor(PointerSensor, POINTER_OPTIONS),
+    useSensor(CanvasKeyboardSensor, KEYBOARD_OPTIONS),
   );
   const announcements = useMemo(() => reorderAnnouncements(fields), [fields]);
   const [dragged, setDragged] = useState<FieldType | null>(null);

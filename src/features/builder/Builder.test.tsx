@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import { renderApp } from '../../test/renderApp';
+import { definitionFor } from '../../fields/registry';
 import { createRepositories } from '../../storage/repositories';
 import type { FormTemplate } from '../../domain/template';
 import {
@@ -13,7 +14,7 @@ import {
   textField,
 } from '../../test/fixtures';
 import { expectNoAxeViolations } from '../../test/axe';
-import { FLOW_TIMEOUT_MS, settleAnnouncements, startFakeClock } from '../../test/timers';
+import { settleAnnouncements, startFakeClock } from '../../test/timers';
 
 const canvas = () => within(screen.getByRole('list', { name: 'Fields' }));
 const detailsDialog = () => screen.getByRole('dialog', { name: 'Title and description' });
@@ -30,41 +31,36 @@ async function setDetails(user: UserEvent, title: string, description = '') {
 }
 
 describe('Builder', () => {
-  // End to end through three pages, so it gets the flow tests' budget.
-  it(
-    'creates a template, saves it, and lists it after a reload',
-    { timeout: FLOW_TIMEOUT_MS },
-    async () => {
-      const first = await renderApp('/templates/new');
-      const { user, router } = first;
+  it('creates a template, saves it, and lists it after a reload', async () => {
+    const first = await renderApp('/templates/new');
+    const { user, router } = first;
 
-      await setDetails(user, 'Expense claim', 'For staff expenses');
-      await user.click(screen.getByRole('button', { name: 'Add Short text' }));
-      await user.type(screen.getByRole('textbox', { name: 'Label' }), 'Employee name');
-      await user.click(screen.getByRole('switch', { name: 'Required' }));
-      await user.click(screen.getByRole('button', { name: 'Save' }));
+    await setDetails(user, 'Expense claim', 'For staff expenses');
+    await user.click(screen.getByRole('button', { name: 'Add Short text' }));
+    await user.type(screen.getByRole('textbox', { name: 'Label' }), 'Employee name');
+    await user.click(screen.getByRole('switch', { name: 'Required' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
-      await waitFor(() => {
-        expect(router.state.location.pathname).toMatch(/^\/templates\/[0-9a-f-]+\/edit$/);
-      });
-      // Replacing the URL is not a new page: the builder stays mounted and focus stays on Save.
-      expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus();
-      expect(screen.getByRole('heading', { level: 1, name: 'Expense claim' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toMatch(/^\/templates\/[0-9a-f-]+\/edit$/);
+    });
+    // Replacing the URL is not a new page: the builder stays mounted and focus stays on Save.
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus();
+    expect(screen.getByRole('heading', { level: 1, name: 'Expense claim' })).toBeInTheDocument();
 
-      // A full refresh: nothing in memory survives, only what was written to localStorage.
-      first.unmount();
-      const second = await renderApp('/');
-      const card = (await screen.findByRole('heading', { name: 'Expense claim' })).closest('li')!;
-      expect(within(card).getByText('For staff expenses')).toBeInTheDocument();
-      expect(within(card).getByText('1 field')).toBeInTheDocument();
+    // A full refresh: nothing in memory survives, only what was written to localStorage.
+    first.unmount();
+    const second = await renderApp('/');
+    const card = (await screen.findByRole('heading', { name: 'Expense claim' })).closest('li')!;
+    expect(within(card).getByText('For staff expenses')).toBeInTheDocument();
+    expect(within(card).getByText('1 field')).toBeInTheDocument();
 
-      await second.user.click(
-        within(card).getByRole('link', { name: /^Open in builder\s*: Expense claim$/ }),
-      );
-      expect(await canvas().findByText('Employee name')).toBeInTheDocument();
-      expect(canvas().getByText('Required')).toBeInTheDocument();
-    },
-  );
+    await second.user.click(
+      within(card).getByRole('link', { name: /^Open in builder\s*: Expense claim$/ }),
+    );
+    expect(await canvas().findByText('Employee name')).toBeInTheDocument();
+    expect(canvas().getByText('Required')).toBeInTheDocument();
+  });
 
   it('adds a field after the selected one, selects it, focuses it and announces it', async () => {
     const { user } = await renderApp('/templates/new');
@@ -437,5 +433,21 @@ describe('Builder', () => {
     await renderApp('/templates/not-an-id/edit');
 
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+  });
+
+  it('re-renders only the edited field’s canvas item while the author types its label', async () => {
+    const fields = [textField('Purpose'), textField('Destination'), textField('Notes')];
+    const saved = template(fields, 'Travel');
+    createRepositories(localStorage).templates.put(saved);
+    const { user } = await renderApp(`/templates/${saved.id}/edit`);
+    await user.click(canvas().getByRole('button', { name: /^Destination/ }));
+    // Only a canvas item calls `summarize`, once per render, so its calls count item renders.
+    const summarize = vi.spyOn(definitionFor('text'), 'summarize');
+
+    await user.type(screen.getByRole('textbox', { name: 'Label' }), 's');
+
+    const renderedLabels = summarize.mock.calls.map(([field]) => field.label);
+    expect(renderedLabels).toContain('Destinations');
+    expect(renderedLabels.filter((label) => label !== 'Destinations')).toEqual([]);
   });
 });

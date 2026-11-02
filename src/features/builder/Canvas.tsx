@@ -1,4 +1,5 @@
 import { useDndContext, useDroppable } from '@dnd-kit/core';
+import { memo, useState } from 'react';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { FieldId } from '../../domain/ids';
@@ -49,6 +50,7 @@ export function Canvas({
   onMove,
   onRemove,
 }: CanvasProps) {
+  const ids = useFieldIds(fields);
   // The canvas itself only takes palette drops; while reordering it would compete with the items.
   const { active } = useDndContext();
   const { setNodeRef } = useDroppable({
@@ -66,10 +68,7 @@ export function Canvas({
           No fields yet. Choose a field type to add the first one.
         </p>
       ) : (
-        <SortableContext
-          items={fields.map((field) => field.id)}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <ol aria-labelledby="canvas-title" className={styles.canvasList}>
             {fields.map((field, index) => (
               <CanvasItem
@@ -91,6 +90,22 @@ export function Canvas({
   );
 }
 
+/**
+ * The fields' IDs in order, as the same array until a field is added, removed or moved. dnd-kit
+ * re-renders every sortable item when this array changes identity, so a fresh `map` on each
+ * render would undo `CanvasItem`'s memo on every keystroke.
+ */
+function useFieldIds(fields: readonly Field[]): FieldId[] {
+  const [ids, setIds] = useState(() => fields.map((field) => field.id));
+  const sameOrder = ids.length === fields.length && fields.every((field, i) => field.id === ids[i]);
+  if (!sameOrder) {
+    const next = fields.map((field) => field.id);
+    setIds(next);
+    return next;
+  }
+  return ids;
+}
+
 interface CanvasItemProps {
   field: Field;
   isFirst: boolean;
@@ -106,8 +121,12 @@ interface CanvasItemProps {
  * One field on the canvas. Only the handle starts a drag: dnd-kit's keyboard sensor starts on
  * Enter as well as Space, which on the select button would take selection away (D8-1). The
  * handle gets dnd-kit's attributes, so its `aria-pressed` never meets the select button's.
+ *
+ * Memoised: its props are the field (a new object only when that field changes), booleans and
+ * the builder's stable handlers, so typing in the config panel re-renders the edited field's
+ * item and no other. dnd-kit still re-renders the items a drag moves.
  */
-function CanvasItem({
+const CanvasItem = memo(function CanvasItem({
   field,
   isFirst,
   isLast,
@@ -198,4 +217,4 @@ function CanvasItem({
       />
     </li>
   );
-}
+});

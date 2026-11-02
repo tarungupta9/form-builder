@@ -20,7 +20,7 @@ import { STORAGE_KEYS, createRepositories } from '../../storage/repositories';
 import { numberField, submittedResponse, template, textField, textareaField } from '../fixtures';
 import { stubListLayout } from '../layout';
 import { renderApp } from '../renderApp';
-import { FLOW_TIMEOUT_MS, settleAnnouncements, startFakeClock } from '../timers';
+import { settleAnnouncements, startFakeClock } from '../timers';
 
 const repositories = () => createRepositories(localStorage);
 const canvas = () => within(screen.getByRole('list', { name: 'Fields' }));
@@ -54,7 +54,7 @@ function seedTravel(): FormTemplate {
   return form;
 }
 
-describe('v0.8 demo: builder workflow', { timeout: FLOW_TIMEOUT_MS }, () => {
+describe('v0.8 demo: builder workflow', () => {
   beforeEach(() => {
     startFakeClock();
     stubListLayout();

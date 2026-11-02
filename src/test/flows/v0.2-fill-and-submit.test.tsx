@@ -7,7 +7,6 @@ import type { FormResponse } from '../../domain/response';
 import { createRepositories } from '../../storage/repositories';
 import { template, textField } from '../fixtures';
 import { renderApp } from '../renderApp';
-import { FLOW_TIMEOUT_MS } from '../timers';
 
 const card = (title: string) =>
   within(screen.getByRole('heading', { level: 2, name: title }).closest('li')!);
@@ -17,7 +16,7 @@ function storedResponses(): FormResponse[] {
   return snapshot.ok ? [...snapshot.value.values()] : [];
 }
 
-describe('v0.2 demo: fill and submit', { timeout: FLOW_TIMEOUT_MS }, () => {
+describe('v0.2 demo: fill and submit', () => {
   it('fills in a form, recovers from a failed submit, submits, and keeps the snapshot after an edit', async () => {
     const name = textField('Employee name');
     name.logic.defaultRequired = true;

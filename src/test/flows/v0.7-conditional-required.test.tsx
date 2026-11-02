@@ -15,7 +15,7 @@ import type { FormTemplate } from '../../domain/template';
 import { createRepositories } from '../../storage/repositories';
 import { condition, group, numberField, template, textField } from '../fixtures';
 import { renderApp } from '../renderApp';
-import { FLOW_TIMEOUT_MS, settleAnnouncements, startFakeClock } from '../timers';
+import { settleAnnouncements, startFakeClock } from '../timers';
 
 const repositories = () => createRepositories(localStorage);
 const canvas = () => within(screen.getByRole('list', { name: 'Fields' }));
@@ -50,7 +50,7 @@ function expenseClaim({ withCondition }: { withCondition: boolean }) {
   return { form, amount, receipt };
 }
 
-describe('v0.7 demo: conditional required and safe editing', { timeout: FLOW_TIMEOUT_MS }, () => {
+describe('v0.7 demo: conditional required and safe editing', () => {
   beforeEach(() => {
     startFakeClock();
   });

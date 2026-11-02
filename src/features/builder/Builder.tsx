@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { newFieldId } from '../../domain/ids';
 import { dependantsOf } from '../../domain/rules/references';
@@ -59,6 +59,13 @@ export function Builder({ initial, isNew }: BuilderProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [removal, setRemoval] = useState<PendingRemoval | null>(null);
   const [previewed, setPreviewed] = useState<FormTemplate | null>(null);
+  // The canvas's handlers read the fields from here, so they stay the same functions across
+  // renders and a keystroke in the config panel re-renders only the edited field's item. Event
+  // handlers run after the commit that updated it, so they always see the current fields.
+  const latestFields = useRef(template.fields);
+  useLayoutEffect(() => {
+    latestFields.current = template.fields;
+  });
   const [conflict, setConflict] = useState<SaveConflict | null>(null);
   const leaving = useUnsavedChangesGuard(isDirty, template.id);
   const summaryRef = useRef<HTMLDivElement>(null);
@@ -90,35 +97,50 @@ export function Builder({ initial, isNew }: BuilderProps) {
    * Move up and Move down. React moves the item's DOM node, which blurs the pressed button, so
    * focus is put back on it; at either end that button is disabled, so the other one takes it.
    */
-  const moveField = (fieldId: FieldId, direction: MoveDirection) => {
-    const from = template.fields.findIndex((field) => field.id === fieldId);
-    const field = template.fields[from];
-    const to = direction === 'up' ? from - 1 : from + 1;
-    if (!field || to < 0 || to >= template.fields.length) return;
-    dispatch({ type: 'field/moved', fieldId: field.id, toIndex: to });
-    const atEnd = to === 0 || to === template.fields.length - 1;
-    const keep = atEnd ? (direction === 'up' ? 'down' : 'up') : direction;
-    focusLater(moveButtonId(field.id, keep));
-    announce(`${fieldName(field)} moved to position ${to + 1} of ${template.fields.length}`);
-  };
+  const moveField = useCallback(
+    (fieldId: FieldId, direction: MoveDirection) => {
+      const fields = latestFields.current;
+      const from = fields.findIndex((field) => field.id === fieldId);
+      const field = fields[from];
+      const to = direction === 'up' ? from - 1 : from + 1;
+      if (!field || to < 0 || to >= fields.length) return;
+      dispatch({ type: 'field/moved', fieldId: field.id, toIndex: to });
+      const atEnd = to === 0 || to === fields.length - 1;
+      const keep = atEnd ? (direction === 'up' ? 'down' : 'up') : direction;
+      focusLater(moveButtonId(field.id, keep));
+      announce(`${fieldName(field)} moved to position ${to + 1} of ${fields.length}`);
+    },
+    [announce, dispatch, focusLater],
+  );
 
   /**
    * A field nothing reads goes at once, as before. A field others read asks first (D-12); the
    * dialog then owns focus on both Cancel and confirm, so this sets no focus of its own.
    */
-  const removeField = (field: Field) => {
-    const index = template.fields.findIndex((candidate) => candidate.id === field.id);
-    const neighbour = template.fields[index + 1] ?? template.fields[index - 1];
-    const focusAfter = neighbour ? canvasItemId(neighbour.id) : 'canvas-title';
-    const dependants = dependantsOf(template.fields, field.id);
-    if (dependants.length > 0) {
-      setRemoval({ field, dependants, focusAfter, open: true });
-      return;
-    }
-    dispatch({ type: 'field/removed', fieldId: field.id });
-    focusLater(focusAfter);
-    announce(`Removed ${fieldName(field)}`);
-  };
+  const removeField = useCallback(
+    (field: Field) => {
+      const fields = latestFields.current;
+      const index = fields.findIndex((candidate) => candidate.id === field.id);
+      const neighbour = fields[index + 1] ?? fields[index - 1];
+      const focusAfter = neighbour ? canvasItemId(neighbour.id) : 'canvas-title';
+      const dependants = dependantsOf(fields, field.id);
+      if (dependants.length > 0) {
+        setRemoval({ field, dependants, focusAfter, open: true });
+        return;
+      }
+      dispatch({ type: 'field/removed', fieldId: field.id });
+      focusLater(focusAfter);
+      announce(`Removed ${fieldName(field)}`);
+    },
+    [announce, dispatch, focusLater],
+  );
+
+  const selectField = useCallback(
+    (fieldId: FieldId) => {
+      dispatch({ type: 'field/selected', fieldId });
+    },
+    [dispatch],
+  );
 
   const closeRemoval = () => {
     setRemoval((pending) => pending && { ...pending, open: false });
@@ -250,9 +272,7 @@ export function Builder({ initial, isNew }: BuilderProps) {
             fields={template.fields}
             selectedFieldId={selectedFieldId}
             fieldsWithIssues={new Set(issues.fields.keys())}
-            onSelect={(fieldId) => {
-              dispatch({ type: 'field/selected', fieldId });
-            }}
+            onSelect={selectField}
             onMove={moveField}
             onRemove={removeField}
           />
