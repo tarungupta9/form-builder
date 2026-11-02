@@ -28,6 +28,8 @@ npm run dev        # http://localhost:5173
 
 The build uses relative paths and a hash router, so `dist/` runs from any static host or sub-path.
 
+**Live demo:** <https://tarungupta9.github.io/form-builder/>. The [workflow](.github/workflows/deploy.yml) runs the format check, `npm run check` and the build on every push and pull request, and deploys `main` to GitHub Pages only when they pass.
+
 ## `localStorage` schema
 
 One key per kind of entity, each holding a versioned envelope with items keyed by ID:
