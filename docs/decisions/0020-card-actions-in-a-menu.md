@@ -26,7 +26,7 @@ _New response_ stays on the card as the one visible action, because filling a fo
 
 ### C. Make the whole card a link
 
-The card opens the template, and the other actions sit inside it or in a menu. Pros: a large target. Cons: which action the card should open is not obvious (fill or edit?). Controls nested inside a link are invalid HTML, and the usual workaround of a stretched link over the card means every label and count is read as part of the link name.
+The card opens the template, and the other actions sit inside it or in a menu. Pros: a large target. Cons: which action the card should open is not obvious (fill or edit?). Controls nested inside a link are invalid HTML, and the usual workaround of a stretched link over the card means every label and count is read as part of the link name. Linking only the title text avoids both problems, and is what the card does (see Consequences).
 
 ### Menu semantics: a disclosure list or the ARIA menu button pattern
 
@@ -42,6 +42,7 @@ B, built as the ARIA menu button pattern in a reusable `src/ui/ActionMenu.tsx`. 
 ## Consequences
 
 - Secondary actions take one more click or keypress. _New response_, the most common action, does not.
+- **The title links to the builder.** The spec says "Click a template — opens it in Builder Mode (edit)", so the card's title text is a `Link` to the builder, inside the `<h2>`. Only the title is the link, so its accessible name is the title alone and no control is nested inside it, which keeps option C's large-target idea without its cost. The target is smaller than a whole card, but it is the text people click on. _Open in builder_ stays in the menu too, so the menu still lists every destination. The heading keeps its id and `tabIndex={-1}`, so focus after a delete still lands on the neighbour's heading, not its link. The link inherits the heading's colour and type so it reads as a title, underlines on hover, and shows the global focus outline. Page tests pin the click, the Enter key, and the link's name inside the level-2 heading.
 - **Focus after Delete.** The menu unmounts its items as it closes. If the Delete item were still focused when the confirmation dialog opened, the dialog would record an element that is about to disappear, and Cancel would send focus to the neighbouring card instead. So choosing any item moves focus back to the trigger _before_ the item runs. Cancel then returns to that card's "More actions" button. Confirm removes the card, so the dialog falls back to the neighbour's title as before. A unit test pins the order (the trigger is focused when `onSelect` runs), and a page test pins where Cancel lands.
 - Tab from inside the menu also focuses the trigger first, then lets the browser move on. Otherwise focus would be on an unmounting item when the default action runs. Clicking elsewhere closes the menu through focus leaving it. While the menu is open, a press on the trigger keeps focus where it is, so Safari, which does not focus buttons on click, does not close and reopen the menu.
 - A new pattern in `src/ui`, ready for other overflow actions (a responses row, the builder header) without new key handling. Each caller's tests open the menu first, through `src/test/cardMenu.ts` on the home page.

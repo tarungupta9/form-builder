@@ -1,4 +1,5 @@
 import type { ReactNode, RefObject } from 'react';
+import { Link } from 'react-router';
 import styles from './ErrorSummary.module.css';
 
 export interface ErrorSummaryItem {
@@ -38,12 +39,26 @@ export function ErrorSummary({ id, ref, title, items }: ErrorSummaryProps) {
   );
 }
 
+interface FailureAlertProps {
+  title: string;
+  body: string;
+  /** Somewhere the user can go to recover, such as a list holding what blocked the action. */
+  link?: { to: string; label: string };
+}
+
 /** An action that failed for a reason outside the user's input, such as full storage. */
-export function FailureAlert({ title, body }: { title: string; body: string }) {
+export function FailureAlert({ title, body, link }: FailureAlertProps) {
   return (
     <div role="alert" className={styles.box}>
       <h2 className={styles.title}>{title}</h2>
       <p>{body}</p>
+      {link && (
+        <p>
+          <Link to={link.to} className={styles.link}>
+            {link.label}
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

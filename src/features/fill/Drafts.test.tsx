@@ -3,11 +3,11 @@
  * against the current template, and opened read-only once submitted. The autosave delay runs
  * on a fake clock (`test/timers.ts`), so waiting it out costs no real time.
  */
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { newResponseId, toIsoDateTime } from '../../domain/ids';
 import type { DraftResponse, FormResponse } from '../../domain/response';
 import type { FormTemplate } from '../../domain/template';
-import { createRepositories } from '../../storage/repositories';
+import { STORAGE_KEYS, createRepositories } from '../../storage/repositories';
 import { expectNoAxeViolations } from '../../test/axe';
 import {
   choice,
@@ -42,6 +42,14 @@ function onlyDraft(): DraftResponse {
   const [stored, ...others] = storedResponses();
   if (stored?.status !== 'draft' || others.length > 0) throw new Error('Expected one draft');
   return stored;
+}
+
+/** Another tab submits a response: the write lands, then the browser fires `storage` here. */
+function submitInAnotherTab(form: FormTemplate, response: FormResponse) {
+  store(form, response);
+  act(() => {
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEYS.responses }));
+  });
 }
 
 const render = (path: string) => renderApp(path, { advanceTimers: vi.advanceTimersByTime });
@@ -223,6 +231,55 @@ describe('Drafts (D-23)', () => {
       'href',
       `/templates/${form.id}/responses`,
     );
+  });
+
+  it('refuses to submit over the same draft already submitted in another tab, keeping the answers', async () => {
+    const name = textField('Name');
+    const form = template([name], 'Expense claim');
+    const draft = draftResponse(form, { [name.id]: text('Ada') });
+    store(form, draft);
+    const { user } = await render(`/templates/${form.id}/responses/${draft.id}`);
+    const submittedElsewhere = submittedResponse(
+      form,
+      { [name.id]: text('Ada Lovelace') },
+      {
+        id: draft.id,
+        createdAt: draft.createdAt,
+      },
+    );
+
+    submitInAnotherTab(form, submittedElsewhere);
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), ' King');
+    await user.click(screen.getByRole('button', { name: 'Submit response' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This response was already submitted',
+    );
+    expect(screen.queryByRole('heading', { name: 'Response submitted' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Ada King');
+    // Neither the submit nor a later autosave touches what was submitted first (D-10).
+    await waitOutAutosave();
+    expect(storedResponses()).toEqual([submittedElsewhere]);
+  });
+
+  it('links from the already-submitted alert to the responses list, which holds the submitted response', async () => {
+    const name = textField('Name');
+    const form = template([name], 'Expense claim');
+    const draft = draftResponse(form, { [name.id]: text('Ada') });
+    store(form, draft);
+    const { user, router } = await render(`/templates/${form.id}/responses/${draft.id}`);
+    submitInAnotherTab(form, submittedResponse(form, {}, { id: draft.id }));
+    await user.click(screen.getByRole('button', { name: 'Submit response' }));
+
+    await user.click(
+      within(await screen.findByRole('alert')).getByRole('link', { name: 'View all responses' }),
+    );
+
+    expect(router.state.location.pathname).toBe(`/templates/${form.id}/responses`);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Responses to Expense claim' }),
+    ).toHaveFocus();
+    expect(screen.getByRole('heading', { name: '1 submitted response' })).toBeVisible();
   });
 
   it('moves a new response to its own URL on submit, so a refresh shows what was submitted', async () => {

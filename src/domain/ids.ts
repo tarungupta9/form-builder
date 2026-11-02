@@ -50,7 +50,12 @@ export const parseResponseId = (raw: string): ResponseId | null =>
 export function parseIsoDate(raw: string): IsoDate | null {
   if (!ISO_DATE.test(raw)) return null;
   const [year, month, day] = raw.split('-').map(Number) as [number, number, number];
-  const date = new Date(year, month - 1, day);
+  // Not `new Date(year, month - 1, day)`: that constructor reads years 0-99 as 1900-1999, so the
+  // check below would reject "0002-03-15", which Chrome emits while a year is typed digit by
+  // digit, and the controlled date input would wipe what the user typed. `setFullYear` takes the
+  // year literally.
+  const date = new Date(2000, 0, 1);
+  date.setFullYear(year, month - 1, day);
   const isRealDay =
     date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
   return isRealDay ? asBrand(raw) : null;

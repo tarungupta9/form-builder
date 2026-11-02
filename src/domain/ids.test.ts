@@ -13,6 +13,22 @@ describe('parseIsoDate', () => {
     expect(parseIsoDate('2024-02-29')).toBe('2024-02-29');
   });
 
+  it('accepts a real day in a year below 100, rather than reading the year as 19xx', () => {
+    expect(parseIsoDate('0002-03-15')).toBe('0002-03-15');
+    expect(parseIsoDate('0004-02-29')).toBe('0004-02-29');
+  });
+
+  it('still rejects an impossible day in a year below 100', () => {
+    expect(parseIsoDate('0002-02-30')).toBeNull();
+    expect(parseIsoDate('0002-02-29')).toBeNull();
+  });
+
+  it('parses every intermediate value Chrome emits while a year is typed digit by digit', () => {
+    for (const typed of ['0002-03-15', '0020-03-15', '0202-03-15', '2026-03-15']) {
+      expect(parseIsoDate(typed)).toBe(typed);
+    }
+  });
+
   it.each(['2026-02-30', '2026-13-01', '31/10/2026', '2026-10-31T00:00:00Z', ''])(
     'rejects %j',
     (raw) => {

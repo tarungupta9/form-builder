@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import type { DateValue } from '../../domain/response';
 import { date, dateField, isoDate } from '../../test/fixtures';
 import { DateRenderer } from './DateRenderer';
 
@@ -53,5 +55,32 @@ describe('Date renderer', () => {
 
     fireEvent.change(input, { target: { value: '' } });
     expect(onChange).toHaveBeenLastCalledWith({ kind: 'date', value: null });
+  });
+
+  it('keeps a date while its year is typed digit by digit, instead of wiping it', () => {
+    // The Fill form owns the value; this stands in for it so the input stays controlled.
+    function Controlled() {
+      const [value, setValue] = useState<DateValue | undefined>(undefined);
+      return (
+        <DateRenderer
+          field={dateField('Date of birth')}
+          value={value}
+          required={false}
+          error={null}
+          controlId="answer"
+          context={{ fields: [] }}
+          onChange={setValue}
+        />
+      );
+    }
+    render(<Controlled />);
+    const input = screen.getByLabelText('Date of birth');
+
+    // Chrome's value after the first year digit of 15/03/2026.
+    fireEvent.change(input, { target: { value: '0002-03-15' } });
+    expect(input).toHaveValue('0002-03-15');
+
+    fireEvent.change(input, { target: { value: '2026-03-15' } });
+    expect(input).toHaveValue('2026-03-15');
   });
 });

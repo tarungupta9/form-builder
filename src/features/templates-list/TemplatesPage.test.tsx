@@ -47,7 +47,9 @@ describe('Templates page', () => {
     const card = within(
       (await screen.findByRole('heading', { name: 'Expense claim' })).closest('li')!,
     );
+    // The title is a link too, but it reads as the card's heading, not as an action.
     expect(card.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Expense claim',
       'New response: Expense claim',
     ]);
     expect(card.getAllByRole('button')).toEqual([await cardMenuButton('Expense claim')]);
@@ -77,6 +79,47 @@ describe('Templates page', () => {
       'href',
       `/templates/${saved.id}/responses`,
     );
+  });
+
+  it('makes the card’s title a link to the builder, named by the title alone, inside its heading', async () => {
+    const saved = template([textField('Name')], 'Expense claim');
+    createRepositories(localStorage).templates.put(saved);
+
+    await renderApp('/');
+
+    const heading = await screen.findByRole('heading', { level: 2, name: 'Expense claim' });
+    expect(within(heading).getByRole('link', { name: 'Expense claim' })).toHaveAttribute(
+      'href',
+      `/templates/${saved.id}/edit`,
+    );
+  });
+
+  it('opens the builder when the template’s title is clicked', async () => {
+    const saved = template([textField('Name')], 'Expense claim');
+    createRepositories(localStorage).templates.put(saved);
+
+    const { user, router } = await renderApp('/');
+    await user.click(await screen.findByRole('link', { name: 'Expense claim' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Expense claim' }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`/templates/${saved.id}/edit`);
+  });
+
+  it('opens the builder when Enter is pressed on the focused title', async () => {
+    const saved = template([textField('Name')], 'Expense claim');
+    createRepositories(localStorage).templates.put(saved);
+
+    const { user, router } = await renderApp('/');
+    const titleLink = await screen.findByRole('link', { name: 'Expense claim' });
+    titleLink.focus();
+    await user.keyboard('{Enter}');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Expense claim' }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`/templates/${saved.id}/edit`);
   });
 
   it('opens the builder from the card’s menu', async () => {

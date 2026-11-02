@@ -26,7 +26,8 @@ export function withAdornments(text: string, prefix: string, suffix: string): st
  */
 export function formatIsoDate(isoDate: IsoDate): string {
   const [year, month, day] = isoDate.split('-').map(Number) as [number, number, number];
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(
-    new Date(year, month - 1, day),
-  );
+  // `setFullYear`, not `new Date(year, ...)`, which would show year 2 as 1902 (see `parseIsoDate`).
+  const date = new Date(2000, 0, 1);
+  date.setFullYear(year, month - 1, day);
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(date);
 }
