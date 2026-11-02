@@ -3,7 +3,8 @@
  * The first builds the chain by role and label, saves it, survives a refresh and refuses a loop
  * (demo steps 1 and 5), and checks the stored conditions match `expenseChain()` below. The
  * second fills that chain in live, hears each change and submits with the chain hidden (steps
- * 2 to 4). They are split because the announcements wait in real time for typing to settle.
+ * 2 to 4), on a fake clock (`test/timers.ts`), so waiting for each announcement to settle costs
+ * no real time. Each part stands on its own: the fill part seeds the chain it needs.
  *
  * jsdom cannot print, so `printDocument` is mocked and the model it is handed is checked.
  * Manual only: building the chain by keyboard alone (Tab, arrows and Space in a real browser),
@@ -27,6 +28,7 @@ import {
   textField,
 } from '../fixtures';
 import { renderApp } from '../renderApp';
+import { settleAnnouncements, startFakeClock } from '../timers';
 
 vi.mock('../../features/export/printDocument', () => ({ printDocument: vi.fn() }));
 const print = vi.mocked(printDocument);
@@ -110,6 +112,10 @@ describe('v0.6 demo: conditional visibility', () => {
     print.mockResolvedValue();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('builds the chain with an "any" group, keeps it after a refresh, and refuses a loop (steps 1 and 5)', async () => {
     const { user, unmount } = renderApp('/templates/new');
 
@@ -183,32 +189,30 @@ describe('v0.6 demo: conditional visibility', () => {
   });
 
   it('shows and hides the chain live, announces each change, and submits without the hidden fields (steps 2 to 4)', async () => {
+    startFakeClock();
     const form = expenseChain();
     repositories().templates.put(form);
-    const { user } = renderApp('/');
+    const { user } = renderApp('/', { advanceTimers: vi.advanceTimersByTime });
     await user.click(await card('Expense claim').findByRole('link', { name: /^New response/ }));
 
     // 2. Only Expense type shows. Travel shows Nights; 4 nights shows Approval reason.
     await user.click(await screen.findByRole('radio', { name: 'Travel' }));
     expect(reasonBox()).not.toBeInTheDocument();
-    await waitFor(() => {
-      expect(spoken()).toHaveTextContent('Nights shown.');
-    });
+    await settleAnnouncements();
+    expect(spoken()).toHaveTextContent('Nights shown.');
     await user.type(nightsBox()!, '4');
-    await waitFor(() => {
-      expect(spoken()).toHaveTextContent('Approval reason shown.');
-    });
+    await settleAnnouncements();
+    expect(spoken()).toHaveTextContent('Approval reason shown.');
     await user.type(reasonBox()!, 'Client workshop');
 
     // 3. Other hides both, and says their answers won't be submitted. Travel brings them back.
     await user.click(screen.getByRole('radio', { name: 'Other' }));
     expect(nightsBox()).not.toBeInTheDocument();
     expect(reasonBox()).not.toBeInTheDocument();
-    await waitFor(() => {
-      expect(spoken()).toHaveTextContent(
-        'Nights and Approval reason hidden. Answers in hidden fields won’t be submitted.',
-      );
-    });
+    await settleAnnouncements();
+    expect(spoken()).toHaveTextContent(
+      'Nights and Approval reason hidden. Answers in hidden fields won’t be submitted.',
+    );
     await user.click(screen.getByRole('radio', { name: 'Travel' }));
     expect(nightsBox()).toHaveValue('4');
     expect(reasonBox()).toHaveValue('Client workshop');

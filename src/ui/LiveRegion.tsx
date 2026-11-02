@@ -14,7 +14,7 @@ type Announce = (message: string) => void;
 const AnnounceContext = createContext<Announce | null>(null);
 
 /** How long to wait for more messages before speaking, so typing never floods a screen reader. */
-const BATCH_MS = 250;
+export const ANNOUNCE_BATCH_MS = 250;
 
 /**
  * One polite live region for the whole app. Messages that arrive close together are joined
@@ -34,7 +34,7 @@ export function LiveRegionProvider({ children }: { children: ReactNode }) {
     timer.current = setTimeout(() => {
       setMessage([...new Set(pending.current)].join('. '));
       pending.current = [];
-    }, BATCH_MS);
+    }, ANNOUNCE_BATCH_MS);
   }, []);
 
   // A message still waiting when the app goes away (a route change in tests, a closed tab) is
