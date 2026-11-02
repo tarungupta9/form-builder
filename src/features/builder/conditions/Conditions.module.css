@@ -1,0 +1,129 @@
+/* The Visibility part of the config panel: the start-up radio, then one block per group. */
+.visibility {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.heading {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.legend {
+  padding: 0 var(--space-1);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.empty,
+.hint,
+.note {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-muted);
+}
+
+.note {
+  color: var(--color-text-secondary);
+}
+
+/* "Show this field when [all] of these match" wraps as one sentence on narrow panels. */
+.sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.match {
+  width: auto;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.rowTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Operator and value side by side, stacking when the panel is narrow. */
+.rowBottom {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr));
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.number {
+  min-width: 0;
+}
+
+.checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+}
+
+.error {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--color-danger);
+}

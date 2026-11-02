@@ -11,7 +11,7 @@ import { screen, waitFor } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import type { FieldValue, FormResponse } from '../../domain/response';
 import type { SingleSelectDisplay } from '../../domain/template';
-import { controlIdOf } from '../../features/fill/FillForm';
+import { controlIdOf } from '../../features/fill/FillField';
 import { createRepositories } from '../../storage/repositories';
 import { singleSelectField, template } from '../../test/fixtures';
 import { renderApp } from '../../test/renderApp';

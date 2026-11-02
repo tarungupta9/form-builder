@@ -4,8 +4,9 @@
  * (pure) and `FieldUi` (React), registered in `registry.ts` and `ui-registry.ts`.
  *
  * The contract grows with the app, one capability per slice: v0.1 covered what the builder and
- * storage need, v0.2 added filling in and validating answers, and v0.3 adds `toExport`, how a
- * field reads in the PDF and the on-screen record of a submitted response.
+ * storage need, v0.2 added filling in and validating answers, v0.3 added `toExport`, how a
+ * field reads in the PDF and the on-screen record of a submitted response, and v0.6 adds
+ * `conditionTarget`, how another field's condition reads this one.
  *
  * Methods are declared with method syntax on purpose. TypeScript checks method parameters
  * bivariantly, which lets `FieldDefinition<'text'>` be used where `FieldDefinition<FieldType>` is
@@ -16,7 +17,7 @@ import type { ReactNode } from 'react';
 import type { z } from 'zod';
 import type { FieldId, IsoDate } from '../domain/ids';
 import type { FieldValue } from '../domain/response';
-import type { Field, FieldOf, FieldType, FieldValueOf } from '../domain/template';
+import type { Field, FieldOf, FieldType, FieldValueOf, Option } from '../domain/template';
 import type { IconName } from '../ui/icons';
 
 /** What the builder knows about the whole form while one field is being configured. */
@@ -45,6 +46,21 @@ export type ExportBlock =
   | { kind: 'section'; text: string; level: HeadingLevel }
   /** `note` is the plugin's caveat about this answer, shown under it (the file-contents footnote). */
   | { kind: 'answer'; label: string; value: ExportValue; note?: string };
+
+/**
+ * How a condition reads a field: the kind of value it compares, which picks the operators and the
+ * value input, plus the options to compare against for a choice. The kinds are exactly the
+ * predicate kinds (`Predicate['kind']`), so a new field type whose answer is text, a number, a
+ * date or a choice joins conditions without any change to the rules engine or the builder.
+ * Options travel inside the descriptor, so a choice target cannot forget them and a text target
+ * cannot have them.
+ */
+export type ConditionTarget =
+  | { kind: 'text' }
+  | { kind: 'number' }
+  | { kind: 'date' }
+  | { kind: 'choice'; options: readonly Option[] }
+  | { kind: 'multi'; options: readonly Option[] };
 
 export interface FieldDefinition<K extends FieldType> {
   type: K;
@@ -84,6 +100,13 @@ export interface FieldDefinition<K extends FieldType> {
    * must not depend on the template as it is today (D-10).
    */
   toExport(field: FieldOf<K>, value: FieldValueOf<K> | undefined): ExportBlock;
+
+  /**
+   * How another field's condition reads this one, or `null` when it cannot be a condition
+   * target (it holds no answer, like a section header). A method, because a choice's options
+   * belong to each field, not to its type.
+   */
+  conditionTarget(field: FieldOf<K>): ConditionTarget | null;
 }
 
 export interface RendererProps<K extends FieldType> {

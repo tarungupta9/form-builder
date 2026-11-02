@@ -14,11 +14,11 @@ import { formatDateTime } from '../../ui/format';
 import styles from './Builder.module.css';
 import { insertionIndex } from './builderReducer';
 import { Canvas, canvasItemId, fieldName } from './Canvas';
-import { CONFIG_IDS, ConfigPanel } from './ConfigPanel';
+import { CONFIG_IDS } from './configIds';
+import { ConfigPanel } from './ConfigPanel';
 import { FieldPalette } from './FieldPalette';
 import { IssueSummary } from './IssueSummary';
 import { DETAILS_IDS, TemplateDetailsDialog } from './TemplateDetailsDialog';
-import { LABEL_MISSING } from './configIssues';
 import { useBuilder } from './useBuilder';
 import { useFocusRequest } from '../../ui/useFocusRequest';
 
@@ -34,7 +34,7 @@ interface BuilderProps {
  * owns the screen-only concerns: focus, announcements and navigation after a save.
  */
 export function Builder({ initial, isNew }: BuilderProps) {
-  const { state, dispatch, issues, save } = useBuilder(initial);
+  const { state, dispatch, graph, issues, save } = useBuilder(initial);
   const { template, selectedFieldId } = state;
   const navigate = useNavigate();
   const announce = useAnnounce();
@@ -148,7 +148,7 @@ export function Builder({ initial, isNew }: BuilderProps) {
           }}
           onShowField={(fieldId, issue) => {
             dispatch({ type: 'field/selected', fieldId });
-            focusLater(issue === LABEL_MISSING ? CONFIG_IDS.fieldLabel : CONFIG_IDS.panelTitle);
+            focusLater(issue.controlId ?? CONFIG_IDS.panelTitle);
           }}
         />
       )}
@@ -166,6 +166,7 @@ export function Builder({ initial, isNew }: BuilderProps) {
         />
         <ConfigPanel
           template={template}
+          graph={graph}
           selectedField={selectedField}
           fieldIssues={(selectedField && issues.fields.get(selectedField.id)) ?? []}
           showIssues={saveAttempted}

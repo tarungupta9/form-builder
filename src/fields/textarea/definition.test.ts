@@ -106,4 +106,8 @@ describe('Long text definition', () => {
       expect(textareaDefinition.toExport(withConfig({}), text(' \n '))).toEqual(notAnswered);
     });
   });
+
+  it('is read by conditions as text, like Short text', () => {
+    expect(textareaDefinition.conditionTarget(textareaField('Notes'))).toEqual({ kind: 'text' });
+  });
 });

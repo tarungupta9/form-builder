@@ -118,4 +118,8 @@ describe('Number definition', () => {
       });
     });
   });
+
+  it('is read by conditions as a number', () => {
+    expect(numberDefinition.conditionTarget(numberField('Nights'))).toEqual({ kind: 'number' });
+  });
 });

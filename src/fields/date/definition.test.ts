@@ -123,4 +123,8 @@ describe('Date definition', () => {
       });
     });
   });
+
+  it('is read by conditions as a date', () => {
+    expect(dateDefinition.conditionTarget(dateField('Departure'))).toEqual({ kind: 'date' });
+  });
 });

@@ -107,4 +107,8 @@ describe('Short text definition', () => {
       });
     });
   });
+
+  it('is read by conditions as text', () => {
+    expect(textDefinition.conditionTarget(textField('Name'))).toEqual({ kind: 'text' });
+  });
 });

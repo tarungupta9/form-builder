@@ -9,18 +9,19 @@
 
 Architecture decision records, in the order they were made. The template is [`decisions/0000-template.md`](decisions/0000-template.md).
 
-| #                                                          | Decision                                                                      | Status                                             |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------- |
-| [0001](decisions/0001-vite-react-typescript-strict.md)     | Build with Vite, React 19 and TypeScript in strict mode                       | Accepted                                           |
-| [0002](decisions/0002-hash-router.md)                      | Route with React Router's hash router                                         | Accepted                                           |
-| [0003](decisions/0003-state-reducer-and-external-store.md) | Hold builder state in a reducer and stored data in an external store          | Accepted                                           |
-| [0004](decisions/0004-zod-at-the-storage-boundary.md)      | Validate everything read from storage with zod                                | Accepted                                           |
-| [0005](decisions/0005-css-modules-and-tokens.md)           | Style with CSS Modules and design tokens                                      | Accepted                                           |
-| [0006](decisions/0006-vitest-and-testing-library.md)       | Test with Vitest and Testing Library, by user scenario                        | Accepted                                           |
-| [0007](decisions/0007-localstorage-schema.md)              | Store one versioned collection per entity kind in `localStorage`              | Accepted (single-item failures superseded by 0012) |
-| [0008](decisions/0008-field-types-as-plugins.md)           | Make each field type a plugin behind one contract                             | Accepted                                           |
-| [0009](decisions/0009-template-details-in-a-dialog.md)     | Edit the template's title and description in a dialog from the heading        | Accepted                                           |
-| [0010](decisions/0010-response-snapshot.md)                | Store a snapshot of the form with each submitted response                     | Accepted                                           |
-| [0011](decisions/0011-pdf-through-the-print-dialog.md)     | Export PDFs through the browser's print dialog, from one shared response view | Accepted                                           |
-| [0012](decisions/0012-set-aside-unreadable-items.md)       | Set aside unreadable stored items one by one, not the whole collection        | Accepted                                           |
-| [0013](decisions/0013-number-as-a-text-input.md)           | Take Number answers in a text input, not `type="number"`                      | Accepted                                           |
+| #                                                          | Decision                                                                                  | Status                                             |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| [0001](decisions/0001-vite-react-typescript-strict.md)     | Build with Vite, React 19 and TypeScript in strict mode                                   | Accepted                                           |
+| [0002](decisions/0002-hash-router.md)                      | Route with React Router's hash router                                                     | Accepted                                           |
+| [0003](decisions/0003-state-reducer-and-external-store.md) | Hold builder state in a reducer and stored data in an external store                      | Accepted                                           |
+| [0004](decisions/0004-zod-at-the-storage-boundary.md)      | Validate everything read from storage with zod                                            | Accepted                                           |
+| [0005](decisions/0005-css-modules-and-tokens.md)           | Style with CSS Modules and design tokens                                                  | Accepted                                           |
+| [0006](decisions/0006-vitest-and-testing-library.md)       | Test with Vitest and Testing Library, by user scenario                                    | Accepted                                           |
+| [0007](decisions/0007-localstorage-schema.md)              | Store one versioned collection per entity kind in `localStorage`                          | Accepted (single-item failures superseded by 0012) |
+| [0008](decisions/0008-field-types-as-plugins.md)           | Make each field type a plugin behind one contract                                         | Accepted                                           |
+| [0009](decisions/0009-template-details-in-a-dialog.md)     | Edit the template's title and description in a dialog from the heading                    | Accepted                                           |
+| [0010](decisions/0010-response-snapshot.md)                | Store a snapshot of the form with each submitted response                                 | Accepted                                           |
+| [0011](decisions/0011-pdf-through-the-print-dialog.md)     | Export PDFs through the browser's print dialog, from one shared response view             | Accepted                                           |
+| [0012](decisions/0012-set-aside-unreadable-items.md)       | Set aside unreadable stored items one by one, not the whole collection                    | Accepted                                           |
+| [0013](decisions/0013-number-as-a-text-input.md)           | Take Number answers in a text input, not `type="number"`                                  | Accepted                                           |
+| [0014](decisions/0014-conditional-logic-semantics.md)      | Combine conditions per effect, fail closed on conflicts, and refuse loops while authoring | Accepted                                           |

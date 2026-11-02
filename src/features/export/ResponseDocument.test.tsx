@@ -7,9 +7,8 @@ import type { ExportDocument } from './exportModel';
 import { ResponseDocument } from './ResponseDocument';
 
 /**
- * Hand-built documents, because only Short text exports today. Every block and value shape is
- * rendered here, so the types that arrive later (sections, lists, notes) need no change to the
- * view: that would be a seam leak (ADR 0011).
+ * Hand-built documents, so the view is tested on every block and value shape without depending
+ * on any field plugin (ADR 0011).
  */
 const exportDocument = (overrides: Partial<ExportDocument> = {}): ExportDocument => ({
   title: 'Expense claim',

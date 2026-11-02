@@ -50,4 +50,5 @@ export const textareaDefinition: FieldDefinition<'textarea'> = {
     const text = value?.value.trim() ?? '';
     return answerBlock(field, text === '' ? EMPTY_EXPORT : { kind: 'text', text });
   },
+  conditionTarget: () => ({ kind: 'text' }),
 };

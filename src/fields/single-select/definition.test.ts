@@ -159,4 +159,15 @@ describe('Single select definition', () => {
       });
     });
   });
+
+  it('offers its options to conditions, in option order', () => {
+    const field = singleSelectField('Expense type', {
+      config: { options: options('Travel', 'Meals'), display: 'dropdown' },
+    });
+
+    expect(definition.conditionTarget(field)).toEqual({
+      kind: 'choice',
+      options: field.config.options,
+    });
+  });
 });

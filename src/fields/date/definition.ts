@@ -60,4 +60,5 @@ export const dateDefinition: FieldDefinition<'date'> = {
       field,
       value?.value ? { kind: 'text', text: formatIsoDate(value.value) } : EMPTY_EXPORT,
     ),
+  conditionTarget: () => ({ kind: 'date' }),
 };

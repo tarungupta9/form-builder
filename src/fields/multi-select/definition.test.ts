@@ -135,4 +135,13 @@ describe('Multi select definition', () => {
       expect(definition.toExport(field, undefined)).toMatchObject({ value: { kind: 'empty' } });
     });
   });
+
+  it('offers its options to conditions, in option order', () => {
+    const field = multiSelectField('Expense types');
+
+    expect(definition.conditionTarget(field)).toEqual({
+      kind: 'multi',
+      options: field.config.options,
+    });
+  });
 });

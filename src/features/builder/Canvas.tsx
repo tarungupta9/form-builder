@@ -1,5 +1,5 @@
 import type { FieldId } from '../../domain/ids';
-import { type Field, hasRequiredAxis } from '../../domain/template';
+import { type Field, groupsOf, hasRequiredAxis } from '../../domain/template';
 import { definitionOf } from '../../fields/registry';
 import { IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/icons';
@@ -10,6 +10,9 @@ export const canvasItemId = (fieldId: FieldId): string => `canvas-item-${fieldId
 
 /** How the builder refers to a field: its label, or a neutral phrase while it has none. */
 export const fieldName = (field: Field): string => field.label.trim() || 'Untitled field';
+
+const hasConditions = (field: Field): boolean =>
+  groupsOf(field.logic).some(({ group }) => group.conditions.length > 0);
 
 interface CanvasProps {
   fields: readonly Field[];
@@ -58,6 +61,11 @@ export function Canvas({
                   {hasRequiredAxis(field.logic) && field.logic.defaultRequired && (
                     <span className={styles.requiredTag}>Required</span>
                   )}
+                  {/* Words, not icons, so they are read as part of the select button's name (D6-7). */}
+                  {!field.logic.defaultVisible && (
+                    <span className={styles.logicTag}>Hidden at start</span>
+                  )}
+                  {hasConditions(field) && <span className={styles.logicTag}>Conditional</span>}
                   {fieldsWithIssues.has(field.id) && (
                     <span className={styles.issueTag}>
                       <Icon name="alert" size={16} />

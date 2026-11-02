@@ -11,6 +11,8 @@ export interface DependencyGraph {
   order: readonly FieldId[];
   /** Fields in or downstream of a cycle; the engine treats them as their defaults (D-6). */
   cyclic: ReadonlySet<FieldId>;
+  /** For each field, the fields that read it. The builder walks this to refuse cycles. */
+  readBy: ReadonlyMap<FieldId, ReadonlySet<FieldId>>;
 }
 
 /** The fields `field` reads through its conditions. */
@@ -57,5 +59,26 @@ export function buildDependencyGraph(fields: readonly Field[]): DependencyGraph 
   const ordered = new Set(order);
   const cyclic = new Set(fields.map((field) => field.id).filter((id) => !ordered.has(id)));
 
-  return { order, cyclic };
+  return { order, cyclic, readBy };
+}
+
+/** Every field that reads `fieldId`, directly or through a chain. */
+export function transitiveDependants(graph: DependencyGraph, fieldId: FieldId): Set<FieldId> {
+  const found = new Set<FieldId>();
+  const stack = [...(graph.readBy.get(fieldId) ?? [])];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (id === undefined || found.has(id)) continue;
+    found.add(id);
+    stack.push(...(graph.readBy.get(id) ?? []));
+  }
+  return found;
+}
+
+/**
+ * Whether `owner` reading `target` would make a loop: a field can never read itself, nor a field
+ * that already depends on it, directly or through a chain (D-6).
+ */
+export function wouldCreateCycle(graph: DependencyGraph, owner: FieldId, target: FieldId): boolean {
+  return owner === target || transitiveDependants(graph, owner).has(target);
 }

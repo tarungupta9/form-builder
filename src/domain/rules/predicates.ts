@@ -1,6 +1,6 @@
 import { assertNever } from '../assertNever';
 import type { FieldValue } from '../response';
-import type { Predicate } from '../template';
+import type { Predicate, PredicateKind, PredicateOf } from '../template';
 import { isEmptyValue, numberOf } from '../values';
 
 /** Trimmed and case-insensitive, so "Yes" matches "yes " (D-7). */
@@ -10,7 +10,7 @@ const normaliseText = (text: string): string => text.trim().toLocaleLowerCase();
  * Whether the builder has filled in everything the predicate needs. An incomplete predicate
  * never holds; the builder reports it as a config issue that blocks Save.
  */
-function isPredicateComplete(predicate: Predicate): boolean {
+export function isPredicateComplete(predicate: Predicate): boolean {
   switch (predicate.kind) {
     case 'text':
       return predicate.value.trim() !== '';
@@ -115,6 +115,99 @@ export function predicateHolds(predicate: Predicate, value: FieldValue | undefin
         default:
           return assertNever(predicate);
       }
+    }
+    default:
+      return assertNever(predicate);
+  }
+}
+
+/**
+ * The operators the spec allows for each kind of target, in the spec's order, with the spec's
+ * words. The builder lists them in this order and a new condition starts on the first.
+ */
+export const OPERATORS = {
+  text: [
+    { op: 'equals', label: 'equals' },
+    { op: 'notEquals', label: 'does not equal' },
+    { op: 'contains', label: 'contains' },
+  ],
+  number: [
+    { op: 'equals', label: 'equals' },
+    { op: 'gt', label: 'is greater than' },
+    { op: 'lt', label: 'is less than' },
+    { op: 'between', label: 'is within range' },
+  ],
+  choice: [
+    { op: 'equals', label: 'equals' },
+    { op: 'notEquals', label: 'does not equal' },
+  ],
+  multi: [
+    { op: 'containsAny', label: 'contains any of' },
+    { op: 'containsAll', label: 'contains all of' },
+    { op: 'containsNone', label: 'contains none of' },
+  ],
+  date: [
+    { op: 'equals', label: 'equals' },
+    { op: 'before', label: 'is before' },
+    { op: 'after', label: 'is after' },
+  ],
+} as const satisfies {
+  [K in PredicateKind]: readonly { op: PredicateOf<K>['op']; label: string }[];
+};
+
+/** A condition the author has just added: the kind's first operator and no value yet. */
+export function emptyPredicate(kind: PredicateKind): Predicate {
+  switch (kind) {
+    case 'text':
+      return { kind, op: 'equals', value: '' };
+    case 'number':
+    case 'choice':
+    case 'date':
+      return { kind, op: 'equals', value: null };
+    case 'multi':
+      return { kind, op: 'containsAny', value: [] };
+    default:
+      return assertNever(kind);
+  }
+}
+
+/** `op` when it is one of `operators`, else `null`: the operator select's value is plain text. */
+function pick<Op extends string>(operators: readonly { op: Op }[], op: string): Op | null {
+  return operators.find((entry) => entry.op === op)?.op ?? null;
+}
+
+/**
+ * The predicate with another operator, keeping the value wherever it still means something: a
+ * number moves into the range's first end and back out again ("> 3" becomes "3 to …"). An
+ * operator the kind does not have leaves the predicate as it is.
+ */
+export function withOperator(predicate: Predicate, op: string): Predicate {
+  switch (predicate.kind) {
+    case 'text': {
+      const next = pick(OPERATORS.text, op);
+      return next ? { ...predicate, op: next } : predicate;
+    }
+    case 'number': {
+      const next = pick(OPERATORS.number, op);
+      if (!next) return predicate;
+      const single = predicate.op === 'between' ? predicate.value.min : predicate.value;
+      if (next === 'between') {
+        const range = predicate.op === 'between' ? predicate.value : { min: single, max: null };
+        return { kind: 'number', op: next, value: range };
+      }
+      return { kind: 'number', op: next, value: single };
+    }
+    case 'choice': {
+      const next = pick(OPERATORS.choice, op);
+      return next ? { ...predicate, op: next } : predicate;
+    }
+    case 'multi': {
+      const next = pick(OPERATORS.multi, op);
+      return next ? { ...predicate, op: next } : predicate;
+    }
+    case 'date': {
+      const next = pick(OPERATORS.date, op);
+      return next ? { ...predicate, op: next } : predicate;
     }
     default:
       return assertNever(predicate);

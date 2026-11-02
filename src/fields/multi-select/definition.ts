@@ -73,4 +73,5 @@ export const multiSelectDefinition: FieldDefinition<'multiSelect'> = {
       .map((option) => option.label.trim());
     return answerBlock(field, items.length > 0 ? { kind: 'list', items } : EMPTY_EXPORT);
   },
+  conditionTarget: ({ config }) => ({ kind: 'multi', options: config.options }),
 };

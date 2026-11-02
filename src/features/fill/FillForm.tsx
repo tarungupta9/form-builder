@@ -1,20 +1,16 @@
 import { type SyntheticEvent, useState } from 'react';
-import type { FieldId } from '../../domain/ids';
 import type { SubmittedResponse } from '../../domain/response';
 import type { FormTemplate } from '../../domain/template';
-import { definitionOf } from '../../fields/registry';
-import { uiOf } from '../../fields/ui-registry';
 import type { Result } from '../../storage/result';
 import { Button } from '../../ui/Button';
 import { ErrorSummary, FailureAlert } from '../../ui/ErrorSummary';
 import { plural } from '../../ui/format';
 import { useFocusRequest } from '../../ui/useFocusRequest';
 import styles from './Fill.module.css';
+import { FillField, controlIdOf } from './FillField';
 import { type SaveError, describeSaveError } from './useSaveResponse';
 import { useFormRuntime } from './useFormRuntime';
-
-/** The ID each field's control carries, so the error summary can move focus to it. */
-export const controlIdOf = (fieldId: FieldId): string => `answer-${fieldId}`;
+import { useVisibilityAnnouncements } from './useVisibilityAnnouncements';
 
 const SUMMARY_ID = 'response-error-summary';
 
@@ -26,13 +22,15 @@ interface FillFormProps {
 
 /**
  * Fill mode: every visible field, drawn by its plugin, and Submit. Which fields show and which
- * are required come from `useFormRuntime`; this component only wires them to the screen.
+ * are required come from `useFormRuntime`, re-evaluated on every change, so fields appear and
+ * disappear as the respondent types; this component wires that to the screen and says so.
  */
 export function FillForm({ template, onSubmit }: FillFormProps) {
   const { values, evaluation, issues, setValue, submit } = useFormRuntime(template);
   const [saveError, setSaveError] = useState<SaveError | null>(null);
   const focusLater = useFocusRequest();
   const visibleFields = template.fields.filter((field) => evaluation.visible.has(field.id));
+  useVisibilityAnnouncements(template.fields, evaluation.visible, values);
 
   const handleSubmit = (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,22 +63,16 @@ export function FillForm({ template, onSubmit }: FillFormProps) {
       )}
 
       <div className={styles.fields}>
-        {visibleFields.map((field) => {
-          const { Renderer } = uiOf(field);
-          return (
-            <Renderer
-              key={field.id}
-              field={field}
-              value={definitionOf(field).readValue(field, values[field.id])}
-              required={evaluation.required.has(field.id)}
-              error={issues.get(field.id) ?? null}
-              controlId={controlIdOf(field.id)}
-              onChange={(value) => {
-                setValue(field.id, value);
-              }}
-            />
-          );
-        })}
+        {visibleFields.map((field) => (
+          <FillField
+            key={field.id}
+            field={field}
+            value={values[field.id]}
+            required={evaluation.required.has(field.id)}
+            error={issues.get(field.id) ?? null}
+            setValue={setValue}
+          />
+        ))}
       </div>
 
       <div className={styles.submitRow}>

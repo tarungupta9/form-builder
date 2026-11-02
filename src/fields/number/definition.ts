@@ -112,4 +112,5 @@ export const numberDefinition: FieldDefinition<'number'> = {
       text: withAdornments(formatNumber(parsed.value, decimals), prefix, suffix),
     });
   },
+  conditionTarget: () => ({ kind: 'number' }),
 };

@@ -50,4 +50,5 @@ export const singleSelectDefinition: FieldDefinition<'singleSelect'> = {
     const option = field.config.options.find((candidate) => candidate.id === value?.value);
     return answerBlock(field, option ? { kind: 'text', text: option.label.trim() } : EMPTY_EXPORT);
   },
+  conditionTarget: ({ config }) => ({ kind: 'choice', options: config.options }),
 };

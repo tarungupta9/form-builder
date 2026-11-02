@@ -191,6 +191,14 @@ export type InputField = Extract<Field, { logic: InputFieldLogic }>;
  */
 export const takesAnswer = (field: Field): field is InputField => hasRequiredAxis(field.logic);
 
+/**
+ * The field with some of its visibility settings replaced, keeping its own type, so the
+ * builder can edit visibility on any field without knowing whether it has a required axis.
+ */
+export function withVisibility<F extends Field>(field: F, change: Partial<FieldLogic>): F {
+  return { ...field, logic: { ...field.logic, ...change } };
+}
+
 export const emptyGroup = (): ConditionGroup => ({ match: 'all', conditions: [] });
 
 export const defaultFieldLogic = (): FieldLogic => ({

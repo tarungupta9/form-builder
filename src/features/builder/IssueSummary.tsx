@@ -4,7 +4,7 @@ import type { Field } from '../../domain/template';
 import { ErrorSummary, type ErrorSummaryItem } from '../../ui/ErrorSummary';
 import { plural } from '../../ui/format';
 import { fieldName } from './Canvas';
-import type { ConfigIssues } from './configIssues';
+import type { ConfigIssue, ConfigIssues } from './configIssues';
 
 interface IssueSummaryProps {
   issues: ConfigIssues;
@@ -12,7 +12,7 @@ interface IssueSummaryProps {
   ref: RefObject<HTMLDivElement | null>;
   /** Opens the dialog that edits the title and description. */
   onShowDetails: () => void;
-  onShowField: (fieldId: FieldId, issue: string) => void;
+  onShowField: (fieldId: FieldId, issue: ConfigIssue) => void;
 }
 
 /** Shown when Save is blocked: every problem, each one opening the setting to fix. */
@@ -35,13 +35,13 @@ export function IssueSummary({
     })),
     ...fields.flatMap((field, index) =>
       (issues.fields.get(field.id) ?? []).map((issue) => ({
-        key: `${field.id}-${issue}`,
+        key: `${field.id}-${issue.controlId ?? ''}-${issue.message}`,
         label: (
           <>
             <span>
               Field {index + 1}, {fieldName(field)}
             </span>
-            : <span>{issue}</span>
+            : <span>{issue.message}</span>
           </>
         ),
         onSelect: () => {

@@ -54,4 +54,6 @@ export const sectionDefinition: FieldDefinition<'section'> = {
     text: headingText(field.label),
     level: HEADING_LEVEL[field.config.size],
   }),
+  // A heading holds no answer, so there is nothing for a condition to read.
+  conditionTarget: () => null,
 };

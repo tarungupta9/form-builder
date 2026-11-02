@@ -58,6 +58,9 @@ export const textareaField = (
   ...overrides,
 });
 
+/** One option with a fresh ID. */
+export const option = (label: string): Option => ({ id: newOptionId(), label });
+
 /** Options with fresh IDs, one per label, in the order given. */
 export const options = (...labels: string[]): Option[] =>
   labels.map((label) => ({ id: newOptionId(), label }));

@@ -65,4 +65,8 @@ describe('Section header definition', () => {
       expect(responseSchema.safeParse(response).success).toBe(false);
     });
   });
+
+  it('cannot be a condition target, because it holds no answer', () => {
+    expect(definitionFor('section').conditionTarget(sectionField('Trip details'))).toBeNull();
+  });
 });

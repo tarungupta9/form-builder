@@ -410,7 +410,13 @@ interface FieldDefinition<K extends FieldType> {
   initialValue(field: FieldOf<K>, today: IsoDate): FieldValueOf<K> | undefined;   // e.g. date prefill
   validateValue(field: FieldOf<K>, value: FieldValueOf<K> | undefined, required: boolean): string | null;  // first problem only
   toExport(field: FieldOf<K>, value: FieldValueOf<K> | undefined): ExportBlock;   // how it reads in the export (§5.6)
+  conditionTarget(field: FieldOf<K>): ConditionTarget | null;   // how a condition reads it; null = cannot be a target
 }
+
+type ConditionTarget =                         // kinds are exactly the predicate kinds (§4.3)
+  | { kind: 'text' } | { kind: 'number' } | { kind: 'date' }
+  | { kind: 'choice'; options: readonly Option[] }
+  | { kind: 'multi';  options: readonly Option[] };
 
 interface FieldUi<K extends FieldType> {
   Editor(props: { field: FieldOf<K>; context: TemplateContext; onChange(next: FieldOf<K>): void }): ReactNode;
@@ -419,7 +425,7 @@ interface FieldUi<K extends FieldType> {
 }
 ```
 
-Members join as the slices need them: `toExport` in v0.3, `predicateKind` (which operators a condition on this field offers) in v0.6. There is no read-only renderer mode: a submitted response is shown on screen from the export model (§5.6), the same content the PDF prints, so the screen and the PDF cannot disagree and renderers stay input-only (owner's decision at v0.2).
+Members join as the slices need them: `toExport` in v0.3, `conditionTarget` in v0.6 (which operators and value input a condition on this field gets, with a choice's options inside the descriptor so they cannot be forgotten; a section header returns `null`). There is no read-only renderer mode: a submitted response is shown on screen from the export model (§5.6), the same content the PDF prints, so the screen and the PDF cannot disagree and renderers stay input-only (owner's decision at v0.2).
 
 **Adding an 11th type:** create `fields/<new>/` (definition, editor, renderer, tests), add its config interface and `FieldTypeMap` entry in `domain/template.ts`, and add one line to each registry. Builder, Fill, PDF, validation and conditions need no changes, as long as the type's value reuses an existing value kind. `npm run check:seam -- <tag>` shows the diff and fails on anything else.
 
@@ -579,7 +585,7 @@ Export layout: a header with the form title, the description when set, "Submitte
 | Prefix and suffix | Rendered as adornments and included in the input's accessible description. |
 | Calculation | A read-only `<output>`, associated with its label, that names its sources. |
 | Submit errors | An error summary at the top gets focus. Each error is a link that jumps to its field (the GOV.UK pattern). |
-| Dynamic changes | One polite live region announces when fields are shown or hidden ("2 fields added below"), when the builder saves, and when a field is added or moved. Announcements are batched so typing never floods a screen reader. |
+| Dynamic changes | One polite live region announces when fields are shown or hidden, when the builder saves, and when a field or condition is added, removed or moved. Fill speaks a visibility change once it has settled (400 ms), as the net change since the last announcement: one or two fields by name ("Nights and Approval reason shown"), a count from three ("3 fields hidden"), plus "Its answer won't be submitted." when a field with an answer hides. Typing never floods a screen reader. |
 | Dialogs | Template details (v0.1, ADR 0009) and Preview (v0.8) use `ui/Dialog`: a native `<dialog>` with `showModal()`, which gives a focus trap and Escape to close. `Dialog` returns focus to the trigger itself, falling back to a named element when the trigger has gone. |
 | Other | A visible `:focus-visible` ring with at least 3:1 contrast, 24×24 px minimum targets (2.5.8), focus never hidden behind sticky panels (2.4.11), `prefers-reduced-motion` respected, and a focus/title update on every route change. |
 
@@ -591,8 +597,8 @@ The goal is correctness first. Each of these is cheap and has a measurable reaso
 
 | Concern | Optimisation |
 | --- | --- |
-| Rules evaluation per keystroke | The dependency graph and topological order are memoised per template. `evaluateForm` is O(fields + conditions) and returns new objects only for fields that changed. |
-| Re-renders while typing | `FieldRenderer` is `React.memo`'d and receives primitives (`value`, `visible`, `required`, `error`) plus a stable `onChange` bound to its field ID. A keystroke re-renders the edited field and its dependants, not the whole form. |
+| Rules evaluation per keystroke | The dependency graph and topological order are memoised per template (in Fill, and separately in the builder). `evaluateForm` is O(fields + conditions); it returns new sets on every call, which is fine because the field wrappers below receive booleans, not the sets. |
+| Re-renders while typing | A shared `FillField` wrapper is `React.memo`'d and receives the field, its raw answer, `required`, `error` and the stable `setValue`; it binds the field ID and calls the plugin's `readValue` inside, so no plugin renderer needs memoising. A keystroke re-renders the edited field and any field whose state changed, not the whole form. |
 | Storage reads | Repositories keep a parsed in-memory cache. `useSyncExternalStore` snapshots are referentially stable. The cache is invalidated on write and on the `storage` event, and nothing calls `JSON.parse` during render. |
 | Storage writes | Draft autosave starts on first input, is debounced (about 400 ms) and is flushed on `pagehide` and `visibilitychange`. Templates are saved only on an explicit _Save_; the builder's recovery copy (D-33) uses the same debounce and flush. |
 | Bundle | Routes are code-split with `React.lazy`, so dnd-kit loads only in the builder and the print view only on export. The dependency budget is kept small: react-router, zod, dnd-kit. |

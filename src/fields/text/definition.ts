@@ -48,4 +48,5 @@ export const textDefinition: FieldDefinition<'text'> = {
       text: `${field.config.prefix}${text}${field.config.suffix}`,
     });
   },
+  conditionTarget: () => ({ kind: 'text' }),
 };

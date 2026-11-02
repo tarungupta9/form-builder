@@ -1,21 +1,20 @@
+import type { DependencyGraph } from '../../domain/rules/graph';
 import { type Field, type FormTemplate, takesAnswer } from '../../domain/template';
 import { definitionOf } from '../../fields/registry';
 import { uiOf } from '../../fields/ui-registry';
 import { Setting, controlClass } from '../../ui/Setting';
 import { Switch } from '../../ui/Switch';
 import styles from './Builder.module.css';
-import { LABEL_MISSING } from './configIssues';
-
-/** Fixed IDs the builder moves focus to when the author follows an issue. */
-export const CONFIG_IDS = {
-  panelTitle: 'config-title',
-  fieldLabel: 'field-label',
-} as const;
+import { CONFIG_IDS } from './configIds';
+import { type ConfigIssue, LABEL_MISSING } from './configIssues';
+import { VisibilitySettings } from './conditions/VisibilitySettings';
 
 interface ConfigPanelProps {
   template: FormTemplate;
+  /** The template's dependency graph, which the condition editor needs to refuse loops. */
+  graph: DependencyGraph;
   selectedField: Field | null;
-  fieldIssues: readonly string[];
+  fieldIssues: readonly ConfigIssue[];
   /** A missing label appears only after a Save attempt, not while the author is typing. */
   showIssues: boolean;
   onFieldChange: (field: Field) => void;
@@ -51,10 +50,12 @@ function NoSelection() {
 function FieldSettings({
   field,
   template,
+  graph,
   fieldIssues,
   showIssues,
   onFieldChange,
 }: ConfigPanelProps & { field: Field }) {
+  const labelMissing = fieldIssues.some((issue) => issue.message === LABEL_MISSING);
   const { Editor } = uiOf(field);
   return (
     <>
@@ -66,7 +67,7 @@ function FieldSettings({
           id={CONFIG_IDS.fieldLabel}
           label="Label"
           hint="What respondents see."
-          error={showIssues && fieldIssues.includes(LABEL_MISSING) ? LABEL_MISSING : null}
+          error={showIssues && labelMissing ? LABEL_MISSING : null}
         >
           {(control) => (
             <input
@@ -90,6 +91,15 @@ function FieldSettings({
           />
         )}
         <Editor field={field} context={{ fields: template.fields }} onChange={onFieldChange} />
+        {/* Keyed by field, so a condition's half-typed number never carries over to another field. */}
+        <VisibilitySettings
+          key={field.id}
+          field={field}
+          fields={template.fields}
+          graph={graph}
+          showIssues={showIssues}
+          onChange={onFieldChange}
+        />
       </div>
     </>
   );
