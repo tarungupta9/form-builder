@@ -58,7 +58,7 @@ describe('Fill: conditional visibility', () => {
 
   it('shows Approval reason as soon as Nights goes above 3, before blur or submit', async () => {
     const { form } = expenseClaim();
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.click(await screen.findByRole('radio', { name: 'Travel' }));
 
     const nights = nightsBox()!;
@@ -72,7 +72,7 @@ describe('Fill: conditional visibility', () => {
 
   it('restores the typed value when a hidden field is shown again (D-9)', async () => {
     const { form } = expenseClaim();
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.click(await screen.findByRole('radio', { name: 'Travel' }));
     await user.type(nightsBox()!, '5');
     await user.type(reasonBox()!, 'Client visit');
@@ -88,7 +88,7 @@ describe('Fill: conditional visibility', () => {
 
   it('submits when a required field is hidden by a condition', async () => {
     const { form } = expenseClaim();
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.click(await screen.findByRole('radio', { name: 'Travel' }));
     await user.click(screen.getByRole('button', { name: 'Submit response' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Enter a number for Nights');
@@ -102,7 +102,7 @@ describe('Fill: conditional visibility', () => {
 
   it('leaves a field hidden by a condition out of the stored record and the PDF', async () => {
     const { form, type, nights, reason } = expenseClaim();
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.click(await screen.findByRole('radio', { name: 'Travel' }));
     await user.type(nightsBox()!, '4');
     await user.type(reasonBox()!, 'Client visit');
@@ -144,7 +144,7 @@ describe('Fill: conditional visibility', () => {
     );
     const form = template([payment, receipt], 'Expense claim');
     createRepositories(localStorage).templates.put(form);
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
 
     await screen.findByRole('radio', { name: 'Card' });
     expect(screen.queryByRole('textbox', { name: 'Receipt number' })).not.toBeInTheDocument();
@@ -157,7 +157,7 @@ describe('Fill: conditional visibility', () => {
     'shows the dependent field when Travel is chosen from %s, the same way for every display',
     async (display) => {
       const { form } = expenseClaim(display);
-      const { user } = renderApp(`/templates/${form.id}/respond`);
+      const { user } = await renderApp(`/templates/${form.id}/respond`);
 
       if (display === 'dropdown') {
         await user.selectOptions(
@@ -200,7 +200,7 @@ const amountBox = () => screen.getByRole('textbox', { name: /^Amount/ });
 describe('Fill: conditional required', () => {
   it('marks Receipt number Required as soon as Amount goes over 50, before submit', async () => {
     const { form } = receiptClaim();
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await screen.findByRole('radio', { name: 'Travel' });
     expect(receiptBox()).not.toBeRequired();
 
@@ -215,7 +215,7 @@ describe('Fill: conditional required', () => {
 
   it('requires Receipt number once Amount is over 50, and blocks submit until it is answered', async () => {
     const { form } = receiptClaim();
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.type(await screen.findByRole('textbox', { name: /^Amount/ }), '60');
 
     await user.click(screen.getByRole('button', { name: 'Submit response' }));
@@ -231,7 +231,7 @@ describe('Fill: conditional required', () => {
 
   it('submits with Receipt number empty when Amount is 50 or less', async () => {
     const { form, amount, receipt } = receiptClaim();
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.type(await screen.findByRole('textbox', { name: /^Amount/ }), '40');
 
     await user.click(screen.getByRole('button', { name: 'Submit response' }));
@@ -244,7 +244,7 @@ describe('Fill: conditional required', () => {
 
   it('submits when a field required by condition is hidden', async () => {
     const { form } = receiptClaim();
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.type(await screen.findByRole('textbox', { name: /^Amount/ }), '60');
 
     await user.click(screen.getByRole('radio', { name: 'Meals' }));

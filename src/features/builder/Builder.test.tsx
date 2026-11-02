@@ -31,7 +31,7 @@ async function setDetails(user: UserEvent, title: string, description = '') {
 
 describe('Builder', () => {
   it('creates a template, saves it, and lists it after a reload', async () => {
-    const first = renderApp('/templates/new');
+    const first = await renderApp('/templates/new');
     const { user, router } = first;
 
     await setDetails(user, 'Expense claim', 'For staff expenses');
@@ -49,7 +49,7 @@ describe('Builder', () => {
 
     // A full refresh: nothing in memory survives, only what was written to localStorage.
     first.unmount();
-    const second = renderApp('/');
+    const second = await renderApp('/');
     const card = (await screen.findByRole('heading', { name: 'Expense claim' })).closest('li')!;
     expect(within(card).getByText('For staff expenses')).toBeInTheDocument();
     expect(within(card).getByText('1 field')).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe('Builder', () => {
   });
 
   it('adds a field after the selected one, selects it, focuses it and announces it', async () => {
-    const { user } = renderApp('/templates/new');
+    const { user } = await renderApp('/templates/new');
     const add = screen.getByRole('button', { name: 'Add Short text' });
     await user.click(add);
     await user.type(screen.getByRole('textbox', { name: 'Label' }), 'First');
@@ -88,7 +88,7 @@ describe('Builder', () => {
   });
 
   it('blocks Save and shows the issue when a text field’s min length exceeds its max length', async () => {
-    const { user, router } = renderApp('/templates/new');
+    const { user, router } = await renderApp('/templates/new');
     await setDetails(user, 'Expense claim');
     await user.click(screen.getByRole('button', { name: 'Add Short text' }));
     await user.type(screen.getByRole('textbox', { name: 'Label' }), 'Employee name');
@@ -108,7 +108,7 @@ describe('Builder', () => {
   });
 
   it('blocks Save until the form has a title and every field has a label', async () => {
-    const { user } = renderApp('/templates/new');
+    const { user } = await renderApp('/templates/new');
     await user.click(screen.getByRole('button', { name: 'Add Short text' }));
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -125,7 +125,7 @@ describe('Builder', () => {
   });
 
   it('keeps the builder’s edits and shows "Storage is full" when saving hits the quota', async () => {
-    const { user } = renderApp('/templates/new');
+    const { user } = await renderApp('/templates/new');
     await setDetails(user, 'Expense claim');
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError');
@@ -141,7 +141,7 @@ describe('Builder', () => {
     it('edits them from the heading, then returns focus to the edit button and announces it', async () => {
       const saved = { ...template([]), title: 'Expense claim', description: '' };
       createRepositories(localStorage).templates.put(saved);
-      const { user } = renderApp(`/templates/${saved.id}/edit`);
+      const { user } = await renderApp(`/templates/${saved.id}/edit`);
       const edit = await screen.findByRole('button', { name: 'Edit title and description' });
 
       await user.click(edit);
@@ -165,8 +165,8 @@ describe('Builder', () => {
       });
     });
 
-    it('shows "Untitled template" until a new template has a title', () => {
-      renderApp('/templates/new');
+    it('shows "Untitled template" until a new template has a title', async () => {
+      await renderApp('/templates/new');
 
       expect(
         screen.getByRole('heading', { level: 1, name: 'Untitled template' }),
@@ -177,7 +177,7 @@ describe('Builder', () => {
       ['Cancel', (user: UserEvent) => user.click(screen.getByRole('button', { name: 'Cancel' }))],
       ['Escape', (user: UserEvent) => user.keyboard('{Escape}')],
     ])('discards the draft when the author closes the dialog with %s', async (_, close) => {
-      const { user } = renderApp('/templates/new');
+      const { user } = await renderApp('/templates/new');
       await setDetails(user, 'Expense claim');
       const edit = screen.getByRole('button', { name: 'Edit title and description' });
 
@@ -196,7 +196,7 @@ describe('Builder', () => {
     });
 
     it('keeps the dialog open and focuses Title when Done is pressed with no title', async () => {
-      const { user } = renderApp('/templates/new');
+      const { user } = await renderApp('/templates/new');
       await user.click(screen.getByRole('button', { name: 'Edit title and description' }));
       const dialog = within(detailsDialog());
       expect(dialog.queryByText('Give the form a title.')).not.toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('Builder', () => {
     });
 
     it('refuses a description over 500 characters and says so while typing', async () => {
-      const { user } = renderApp('/templates/new');
+      const { user } = await renderApp('/templates/new');
       await user.click(screen.getByRole('button', { name: 'Edit title and description' }));
       const dialog = within(detailsDialog());
       await user.type(dialog.getByRole('textbox', { name: 'Title' }), 'Expense claim');
@@ -232,7 +232,7 @@ describe('Builder', () => {
   it('removes a field and moves focus to its neighbour', async () => {
     const saved = template([textField('Name'), textField('Email')]);
     createRepositories(localStorage).templates.put(saved);
-    const { user } = renderApp(`/templates/${saved.id}/edit`);
+    const { user } = await renderApp(`/templates/${saved.id}/edit`);
 
     await user.click(await screen.findByRole('button', { name: 'Remove Name' }));
 
@@ -268,7 +268,7 @@ describe('Builder', () => {
 
     it('asks before removing a field others read, naming them', async () => {
       const { saved } = expenseClaim();
-      const { user } = renderApp(`/templates/${saved.id}/edit`);
+      const { user } = await renderApp(`/templates/${saved.id}/edit`);
 
       await user.click(await screen.findByRole('button', { name: 'Remove Amount' }));
 
@@ -288,7 +288,7 @@ describe('Builder', () => {
 
     it('keeps the field and returns focus to Remove on Cancel or Escape', async () => {
       const { saved } = expenseClaim();
-      const { user } = renderApp(`/templates/${saved.id}/edit`);
+      const { user } = await renderApp(`/templates/${saved.id}/edit`);
       const remove = await screen.findByRole('button', { name: 'Remove Amount' });
 
       await user.click(remove);
@@ -306,7 +306,7 @@ describe('Builder', () => {
     it('removes the field and its conditions on confirm, focuses the neighbour and announces it', async () => {
       startFakeClock();
       const { saved, onNotes } = expenseClaim();
-      const { user } = renderApp(`/templates/${saved.id}/edit`, {
+      const { user } = await renderApp(`/templates/${saved.id}/edit`, {
         advanceTimers: vi.advanceTimersByTime,
       });
 
@@ -331,7 +331,7 @@ describe('Builder', () => {
 
     it('removes a field nothing reads without asking', async () => {
       const { saved } = expenseClaim();
-      const { user } = renderApp(`/templates/${saved.id}/edit`);
+      const { user } = await renderApp(`/templates/${saved.id}/edit`);
 
       await user.click(await screen.findByRole('button', { name: 'Remove Receipt number' }));
 
@@ -355,7 +355,7 @@ describe('Builder', () => {
     );
     const saved = template([payment, receipt]);
     createRepositories(localStorage).templates.put(saved);
-    const { user } = renderApp(`/templates/${saved.id}/edit`);
+    const { user } = await renderApp(`/templates/${saved.id}/edit`);
     await user.click(await canvas().findByRole('button', { name: /^Payment/ }));
 
     await user.click(screen.getByRole('button', { name: 'Remove Cash' }));
@@ -397,7 +397,7 @@ describe('Builder', () => {
 
     it('saves a template whose fields have warnings', async () => {
       const saved = withWarning();
-      const { user } = renderApp(`/templates/${saved.id}/edit`);
+      const { user } = await renderApp(`/templates/${saved.id}/edit`);
       await user.click(await canvas().findByRole('button', { name: /^Notes/ }));
       expect(screen.getByText(/respondents never see it/)).toBeVisible();
 
@@ -412,7 +412,7 @@ describe('Builder', () => {
 
     it('does not count warnings as problems before saving', async () => {
       const saved = withWarning();
-      const { user } = renderApp(`/templates/${saved.id}/edit`);
+      const { user } = await renderApp(`/templates/${saved.id}/edit`);
 
       await user.click(await canvas().findByRole('button', { name: /^Notes/ }));
 
@@ -423,13 +423,13 @@ describe('Builder', () => {
   });
 
   it('shows Not found for a template that does not exist', async () => {
-    renderApp('/templates/00000000-0000-4000-8000-000000000000/edit');
+    await renderApp('/templates/00000000-0000-4000-8000-000000000000/edit');
 
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
   });
 
   it('shows Not found for a malformed template ID', async () => {
-    renderApp('/templates/not-an-id/edit');
+    await renderApp('/templates/not-an-id/edit');
 
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
   });

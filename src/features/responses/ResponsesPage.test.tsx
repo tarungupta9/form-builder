@@ -29,7 +29,7 @@ describe('Responses page', () => {
     const form = template([textField('Name')], 'Expense claim');
     save(form);
 
-    renderApp(`/templates/${form.id}/responses`);
+    await renderApp(`/templates/${form.id}/responses`);
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Responses to Expense claim' }),
@@ -45,7 +45,7 @@ describe('Responses page', () => {
     const form = template([], 'Empty form');
     save(form);
 
-    renderApp(`/templates/${form.id}/responses`);
+    await renderApp(`/templates/${form.id}/responses`);
 
     expect(
       await screen.findByText('Add a field in the builder to collect responses.'),
@@ -60,7 +60,7 @@ describe('Responses page', () => {
     const middle = submittedResponse(form, {}, { submittedAt: at('2026-10-31T12:00:00Z') });
     save(form, oldest, newest, middle);
 
-    renderApp(`/templates/${form.id}/responses`);
+    await renderApp(`/templates/${form.id}/responses`);
 
     expect(
       await screen.findByRole('heading', { level: 2, name: '3 submitted responses' }),
@@ -89,7 +89,7 @@ describe('Responses page', () => {
     };
     createRepositories(localStorage).responses.put(draft);
 
-    renderApp(`/templates/${claim.id}/responses`);
+    await renderApp(`/templates/${claim.id}/responses`);
 
     expect(
       await screen.findByRole('heading', { level: 2, name: '1 submitted response' }),
@@ -102,7 +102,7 @@ describe('Responses page', () => {
     ['an unknown', newTemplateId()],
     ['an invalid', 'not-an-id'],
   ])('shows Not found for %s template ID', async (_case, id) => {
-    renderApp(`/templates/${id}/responses`);
+    await renderApp(`/templates/${id}/responses`);
 
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeVisible();
   });
@@ -112,7 +112,7 @@ describe('Responses page', () => {
     save(form);
     localStorage.setItem(STORAGE_KEYS.responses, '{bad');
 
-    renderApp(`/templates/${form.id}/responses`);
+    await renderApp(`/templates/${form.id}/responses`);
 
     expect(
       await screen.findByRole('heading', { name: 'Your saved data could not be read' }),
@@ -129,7 +129,7 @@ describe('Responses page', () => {
       JSON.stringify({ schemaVersion: 1, items: { [kept.id]: kept, broken: {} } }),
     );
 
-    renderApp(`/templates/${form.id}/responses`);
+    await renderApp(`/templates/${form.id}/responses`);
 
     expect(
       await screen.findByRole('region', { name: '1 saved response could not be read' }),
@@ -144,7 +144,7 @@ describe('Responses page', () => {
     save(form, response);
     save({ ...form, title: 'Claim form', fields: [{ ...name, label: 'Full name' }] });
     print.mockResolvedValue();
-    const { user } = renderApp(`/templates/${form.id}/responses`);
+    const { user } = await renderApp(`/templates/${form.id}/responses`);
 
     await user.click(await screen.findByRole('button', { name: /^Re-download PDF/ }));
 
@@ -166,7 +166,7 @@ describe('Responses page', () => {
           finish = resolve;
         }),
     );
-    const { user } = renderApp(`/templates/${form.id}/responses`);
+    const { user } = await renderApp(`/templates/${form.id}/responses`);
     const button = await screen.findByRole('button', { name: /^Re-download PDF/ });
 
     await user.click(button);
@@ -185,7 +185,7 @@ describe('Responses page', () => {
     const form = template([textField('Name')]);
     save(form, submittedResponse(form));
     print.mockRejectedValue(new Error('blocked'));
-    const { user } = renderApp(`/templates/${form.id}/responses`);
+    const { user } = await renderApp(`/templates/${form.id}/responses`);
     const button = await screen.findByRole('button', { name: /^Re-download PDF/ });
 
     await user.click(button);
@@ -198,7 +198,7 @@ describe('Responses page', () => {
     const form = template([textField('Name')], 'Expense claim');
     save(form);
 
-    renderApp(`/templates/${form.id}/responses`);
+    await renderApp(`/templates/${form.id}/responses`);
 
     await waitFor(() => {
       expect(document.title).toBe('Responses: Expense claim – Form builder');
@@ -211,12 +211,12 @@ describe('Responses page', () => {
     save(empty);
     save(full, submittedResponse(full), submittedResponse(full));
 
-    const first = renderApp(`/templates/${empty.id}/responses`);
+    const first = await renderApp(`/templates/${empty.id}/responses`);
     await screen.findByRole('heading', { name: 'No responses yet' });
     await expectNoAxeViolations(first.container);
     first.unmount();
 
-    const second = renderApp(`/templates/${full.id}/responses`);
+    const second = await renderApp(`/templates/${full.id}/responses`);
     await screen.findByRole('heading', { name: '2 submitted responses' });
     await expectNoAxeViolations(second.container);
   });

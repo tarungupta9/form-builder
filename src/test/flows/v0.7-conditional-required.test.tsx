@@ -61,7 +61,7 @@ describe('v0.7 demo: conditional required and safe editing', () => {
 
   it('builds "Receipt number is required when Amount > 50", and keeps it after a refresh', async () => {
     const { form, amount } = expenseClaim({ withCondition: false });
-    const { user, unmount } = renderApp(`/templates/${form.id}/edit`, {
+    const { user, unmount } = await renderApp(`/templates/${form.id}/edit`, {
       advanceTimers: vi.advanceTimersByTime,
     });
 
@@ -87,7 +87,7 @@ describe('v0.7 demo: conditional required and safe editing', () => {
 
     // A full refresh: what was saved is exactly the condition the other parts run on.
     unmount();
-    const { user: author } = renderApp(`/templates/${form.id}/edit`, {
+    const { user: author } = await renderApp(`/templates/${form.id}/edit`, {
       advanceTimers: vi.advanceTimersByTime,
     });
     await author.click(await canvas().findByRole('button', { name: /^Receipt number/ }));
@@ -108,7 +108,7 @@ describe('v0.7 demo: conditional required and safe editing', () => {
 
   it('requires Receipt number at 60 and not at 40 (demo submit)', async () => {
     const { form, amount, receipt } = expenseClaim({ withCondition: true });
-    const { user } = renderApp(`/templates/${form.id}/respond`, {
+    const { user } = await renderApp(`/templates/${form.id}/respond`, {
       advanceTimers: vi.advanceTimersByTime,
     });
 
@@ -138,7 +138,7 @@ describe('v0.7 demo: conditional required and safe editing', () => {
 
   it('removing Amount names Receipt number, and its condition is gone afterwards (demo delete)', async () => {
     const { form } = expenseClaim({ withCondition: true });
-    const { user } = renderApp(`/templates/${form.id}/edit`, {
+    const { user } = await renderApp(`/templates/${form.id}/edit`, {
       advanceTimers: vi.advanceTimersByTime,
     });
     const remove = await screen.findByRole('button', { name: 'Remove Amount' });

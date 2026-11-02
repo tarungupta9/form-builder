@@ -28,7 +28,7 @@ function storedAnswers(): (FieldValue | undefined)[] {
 }
 
 /** Opens a new response to a form whose only field is a Payment method single select. */
-function openForm(display: SingleSelectDisplay, required: boolean) {
+async function openForm(display: SingleSelectDisplay, required: boolean) {
   const base = singleSelectField('Payment method');
   const field = {
     ...base,
@@ -37,7 +37,7 @@ function openForm(display: SingleSelectDisplay, required: boolean) {
   };
   const form = template([field]);
   createRepositories(localStorage).templates.put(form);
-  const app = renderApp(`/templates/${form.id}/respond`);
+  const app = await renderApp(`/templates/${form.id}/respond`);
   const cash = field.config.options[1]!;
   return { ...app, field, cash };
 }
@@ -67,7 +67,7 @@ describe.each<SingleSelectDisplay>(['radio', 'dropdown', 'tiles'])(
   'Single select shown as %s',
   (display) => {
     it('blocks an empty required answer with the shared message and focus target', async () => {
-      const { user, field } = openForm(display, true);
+      const { user, field } = await openForm(display, true);
       await screen.findByRole('button', { name: 'Submit response' });
 
       await submit(user);
@@ -90,7 +90,7 @@ describe.each<SingleSelectDisplay>(['radio', 'dropdown', 'tiles'])(
     });
 
     it('clears the error once an option is chosen and stores the option’s ID', async () => {
-      const { user, cash } = openForm(display, true);
+      const { user, cash } = await openForm(display, true);
       await screen.findByRole('button', { name: 'Submit response' });
       await submit(user);
       await screen.findByRole('alert');
@@ -106,7 +106,7 @@ describe.each<SingleSelectDisplay>(['radio', 'dropdown', 'tiles'])(
     });
 
     it('stores no answer for an optional field chosen and then cleared', async () => {
-      const { user } = openForm(display, false);
+      const { user } = await openForm(display, false);
       await screen.findByRole('button', { name: 'Submit response' });
 
       await choose(user, display, 'Cash');

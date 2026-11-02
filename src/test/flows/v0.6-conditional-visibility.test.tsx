@@ -117,7 +117,7 @@ describe('v0.6 demo: conditional visibility', () => {
   });
 
   it('builds the chain with an "any" group, keeps it after a refresh, and refuses a loop (steps 1 and 5)', async () => {
-    const { user, unmount } = renderApp('/templates/new');
+    const { user, unmount } = await renderApp('/templates/new');
 
     await user.click(screen.getByRole('button', { name: 'Edit title and description' }));
     const details = within(screen.getByRole('dialog', { name: 'Title and description' }));
@@ -168,7 +168,7 @@ describe('v0.6 demo: conditional visibility', () => {
 
     // A full refresh keeps the conditions: the canvas tags both dependants.
     unmount();
-    const { user: author } = renderApp('/');
+    const { user: author } = await renderApp('/');
     await author.click(
       await card('Expense claim').findByRole('link', { name: /^Open in builder/ }),
     );
@@ -192,7 +192,7 @@ describe('v0.6 demo: conditional visibility', () => {
     startFakeClock();
     const form = expenseChain();
     repositories().templates.put(form);
-    const { user } = renderApp('/', { advanceTimers: vi.advanceTimersByTime });
+    const { user } = await renderApp('/', { advanceTimers: vi.advanceTimersByTime });
     await user.click(await card('Expense claim').findByRole('link', { name: /^New response/ }));
 
     // 2. Only Expense type shows. Travel shows Nights; 4 nights shows Approval reason.

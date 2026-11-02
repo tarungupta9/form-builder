@@ -22,10 +22,10 @@ import {
 import { renderApp } from '../../../test/renderApp';
 import { settleAnnouncements, startFakeClock } from '../../../test/timers';
 
-function openBuilder(fields: Field[], options: Parameters<typeof renderApp>[1] = {}) {
+async function openBuilder(fields: Field[], options: Parameters<typeof renderApp>[1] = {}) {
   const form = template(fields, 'Expense claim');
   createRepositories(localStorage).templates.put(form);
-  return { form, ...renderApp(`/templates/${form.id}/edit`, options) };
+  return { form, ...(await renderApp(`/templates/${form.id}/edit`, options)) };
 }
 
 async function select(user: UserEvent, label: string) {
@@ -52,7 +52,7 @@ describe('Required settings', () => {
     ['Single select', singleSelectField('Receipt number')],
     ['Multi select', multiSelectField('Receipt number')],
   ])('gives a %s field the Required switch and both groups', async (_type, field) => {
-    const { user } = openBuilder([numberField('Amount'), field]);
+    const { user } = await openBuilder([numberField('Amount'), field]);
     await select(user, 'Receipt number');
 
     expect(required().getByRole('switch', { name: 'Required' })).not.toBeChecked();
@@ -61,7 +61,7 @@ describe('Required settings', () => {
   });
 
   it('gives a section header neither the switch nor the groups', async () => {
-    const { user } = openBuilder([numberField('Amount'), sectionField('Approval')]);
+    const { user } = await openBuilder([numberField('Amount'), sectionField('Approval')]);
     await select(user, 'Approval');
 
     expect(screen.queryByRole('region', { name: 'Required' })).not.toBeInTheDocument();
@@ -69,7 +69,7 @@ describe('Required settings', () => {
   });
 
   it('never offers the field itself as a target', async () => {
-    const { user } = openBuilder([numberField('Amount'), textField('Receipt number')]);
+    const { user } = await openBuilder([numberField('Amount'), textField('Receipt number')]);
     await select(user, 'Receipt number');
 
     await user.click(requireGroup().getByRole('button', { name: 'Add a required condition' }));
@@ -83,7 +83,7 @@ describe('Required settings', () => {
   });
 
   it('reads the switch and groups as one summary sentence, which describes the section', async () => {
-    const { user } = openBuilder([numberField('Amount'), textField('Receipt number')]);
+    const { user } = await openBuilder([numberField('Amount'), textField('Receipt number')]);
     await select(user, 'Receipt number');
     const section = screen.getByRole('region', { name: 'Required' });
     expect(section).toHaveAccessibleDescription('Optional.');
@@ -110,7 +110,7 @@ describe('Required settings', () => {
 
   it('saves "required when Amount is over 50" as the require group', async () => {
     const amount = numberField('Amount');
-    const { form, user } = openBuilder([amount, textField('Receipt number')]);
+    const { form, user } = await openBuilder([amount, textField('Receipt number')]);
     await select(user, 'Receipt number');
 
     await user.click(requireGroup().getByRole('button', { name: 'Add a required condition' }));
@@ -137,7 +137,7 @@ describe('Required settings', () => {
   });
 
   it('blocks Save for an unfinished required condition, and the issue link lands on its value', async () => {
-    const { user } = openBuilder([numberField('Amount'), textField('Receipt number')]);
+    const { user } = await openBuilder([numberField('Amount'), textField('Receipt number')]);
     await select(user, 'Receipt number');
     await user.click(requireGroup().getByRole('button', { name: 'Add a required condition' }));
 
@@ -161,7 +161,7 @@ describe('Required settings', () => {
 
     it('warns that required conditions do nothing on a field that is already required, and announces it once', async () => {
       startFakeClock();
-      const { user } = openBuilder([numberField('Amount'), textField('Receipt number')], {
+      const { user } = await openBuilder([numberField('Amount'), textField('Receipt number')], {
         advanceTimers: vi.advanceTimersByTime,
       });
       await select(user, 'Receipt number');
@@ -196,7 +196,7 @@ describe('Required settings', () => {
         'all',
         condition(amount.id, { kind: 'number', op: 'lt', value: 10 }),
       );
-      const { user } = openBuilder([amount, receipt]);
+      const { user } = await openBuilder([amount, receipt]);
       await select(user, 'Receipt number');
 
       expect(
@@ -212,7 +212,9 @@ describe('Required settings', () => {
         'all',
         condition(amount.id, { kind: 'number', op: 'lt', value: 10 }),
       );
-      const { user } = openBuilder([amount, receipt], { advanceTimers: vi.advanceTimersByTime });
+      const { user } = await openBuilder([amount, receipt], {
+        advanceTimers: vi.advanceTimersByTime,
+      });
 
       await select(user, 'Receipt number');
       await settleAnnouncements();
@@ -223,7 +225,7 @@ describe('Required settings', () => {
   });
 
   it('has no axe violations with both groups filled in', async () => {
-    const { user } = openBuilder([numberField('Amount'), textField('Receipt number')]);
+    const { user } = await openBuilder([numberField('Amount'), textField('Receipt number')]);
     await select(user, 'Receipt number');
     await user.click(required().getByRole('switch', { name: 'Required' }));
     await user.click(requireGroup().getByRole('button', { name: 'Add a required condition' }));

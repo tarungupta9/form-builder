@@ -21,10 +21,10 @@ import {
 } from '../../../test/fixtures';
 import { renderApp } from '../../../test/renderApp';
 
-function openBuilder(fields: Field[]) {
+async function openBuilder(fields: Field[]) {
   const form = template(fields, 'Expense claim');
   createRepositories(localStorage).templates.put(form);
-  return { form, ...renderApp(`/templates/${form.id}/edit`) };
+  return { form, ...(await renderApp(`/templates/${form.id}/edit`)) };
 }
 
 async function select(user: UserEvent, label: string) {
@@ -63,7 +63,7 @@ function expenseChain() {
 describe('Visibility settings', () => {
   describe('target picker', () => {
     it('offers every other field that holds an answer, in form order, including fields below, but never the field itself (Q-4)', async () => {
-      const { user } = openBuilder([
+      const { user } = await openBuilder([
         textField('Purpose'),
         sectionField('Trip details'),
         textField('Note'),
@@ -81,7 +81,7 @@ describe('Visibility settings', () => {
 
     it('disables a field that depends on this one, and says why in visible text (D-6)', async () => {
       const { type, nights, reason } = expenseChain();
-      const { user } = openBuilder([type, nights, reason]);
+      const { user } = await openBuilder([type, nights, reason]);
       await select(user, 'Expense type');
 
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
@@ -100,7 +100,7 @@ describe('Visibility settings', () => {
     it('shows a disabled option’s reason in its own text, and links the hint to the select', async () => {
       const { type, nights, reason } = expenseChain();
       const purpose = textField('Purpose');
-      const { user } = openBuilder([purpose, type, nights, reason]);
+      const { user } = await openBuilder([purpose, type, nights, reason]);
       await select(user, 'Expense type');
 
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
@@ -115,7 +115,7 @@ describe('Visibility settings', () => {
     });
 
     it('keeps Add disabled, with the reason, when there is no other field to read', async () => {
-      const { user } = openBuilder([textField('Only field')]);
+      const { user } = await openBuilder([textField('Only field')]);
       await select(user, 'Only field');
 
       const add = showGroup().getByRole('button', { name: 'Add a show condition' });
@@ -143,7 +143,7 @@ describe('Visibility settings', () => {
       ],
       ['Date', dateField('Target'), ['equals', 'is before', 'is after']],
     ])('offers the spec’s operators for a %s target', async (_type, target, operators) => {
-      const { user } = openBuilder([target, textField('Note')]);
+      const { user } = await openBuilder([target, textField('Note')]);
       await select(user, 'Note');
 
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
@@ -157,7 +157,7 @@ describe('Visibility settings', () => {
       const type = singleSelectField('Expense type', {
         config: { options: options('Travel', 'Meals', 'Other'), display: 'dropdown' },
       });
-      const { user } = openBuilder([type, textField('Note')]);
+      const { user } = await openBuilder([type, textField('Note')]);
       await select(user, 'Note');
 
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
@@ -171,7 +171,7 @@ describe('Visibility settings', () => {
       const types = multiSelectField('Expense types', {
         config: { options: options('Travel', 'Meals') },
       });
-      const { user } = openBuilder([types, textField('Note')]);
+      const { user } = await openBuilder([types, textField('Note')]);
       await select(user, 'Note');
 
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
@@ -184,7 +184,7 @@ describe('Visibility settings', () => {
     });
 
     it('asks for two labelled numbers for a range, keeping the number already typed', async () => {
-      const { user } = openBuilder([numberField('Nights'), textField('Note')]);
+      const { user } = await openBuilder([numberField('Nights'), textField('Note')]);
       await select(user, 'Note');
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
       await user.type(showGroup().getByRole('textbox', { name: 'Show condition 1: value' }), '3');
@@ -200,7 +200,7 @@ describe('Visibility settings', () => {
 
     it('starts the comparison again when the target changes to another kind', async () => {
       const type = singleSelectField('Expense type');
-      const { user } = openBuilder([type, numberField('Nights'), textField('Note')]);
+      const { user } = await openBuilder([type, numberField('Nights'), textField('Note')]);
       await select(user, 'Note');
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
       await user.selectOptions(
@@ -224,7 +224,7 @@ describe('Visibility settings', () => {
 
   describe('groups', () => {
     it('reads each group as one sentence, and changes one group’s match without the other’s', async () => {
-      const { user } = openBuilder([numberField('Nights'), textField('Note')]);
+      const { user } = await openBuilder([numberField('Nights'), textField('Note')]);
       await select(user, 'Note');
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
       await user.click(hideGroup().getByRole('button', { name: 'Add a hide condition' }));
@@ -244,7 +244,7 @@ describe('Visibility settings', () => {
     });
 
     it('focuses and announces a new condition, and moves focus to the next one on removal', async () => {
-      const { user } = openBuilder([numberField('Nights'), textField('Note')]);
+      const { user } = await openBuilder([numberField('Nights'), textField('Note')]);
       await select(user, 'Note');
       const add = showGroup().getByRole('button', { name: 'Add a show condition' });
       await user.click(add);
@@ -269,7 +269,7 @@ describe('Visibility settings', () => {
     });
 
     it('notes that show conditions do nothing on a field that is already visible (D-3)', async () => {
-      const { user } = openBuilder([numberField('Nights'), textField('Note')]);
+      const { user } = await openBuilder([numberField('Nights'), textField('Note')]);
       await select(user, 'Note');
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
       const note =
@@ -285,7 +285,7 @@ describe('Visibility settings', () => {
     });
 
     it('gives an input field Required and Visibility groups, and a section header Visibility only', async () => {
-      const { user } = openBuilder([
+      const { user } = await openBuilder([
         numberField('Nights'),
         textField('Note'),
         sectionField('Trip'),
@@ -310,7 +310,7 @@ describe('Visibility settings', () => {
     });
 
     it('warns live that a field starting hidden with nothing showing it is never seen, without blocking Save', async () => {
-      const { form, user } = openBuilder([numberField('Nights'), textField('Note')]);
+      const { form, user } = await openBuilder([numberField('Nights'), textField('Note')]);
       await select(user, 'Note');
 
       await user.click(visibility().getByRole('radio', { name: 'Hidden' }));
@@ -327,7 +327,7 @@ describe('Visibility settings', () => {
     });
 
     it('gives a section header the same visibility settings', async () => {
-      const { user } = openBuilder([textField('Purpose'), sectionField('Trip details')]);
+      const { user } = await openBuilder([textField('Purpose'), sectionField('Trip details')]);
       await select(user, 'Trip details');
 
       expect(showGroup().getByRole('button', { name: 'Add a show condition' })).toBeEnabled();
@@ -338,7 +338,7 @@ describe('Visibility settings', () => {
     it('saves the start-up visibility and the conditions, and tags the field on the canvas', async () => {
       const nights = numberField('Nights');
       const reason = textField('Approval reason');
-      const { form, user } = openBuilder([nights, reason]);
+      const { form, user } = await openBuilder([nights, reason]);
       await select(user, 'Approval reason');
 
       await user.click(visibility().getByRole('radio', { name: 'Hidden' }));
@@ -362,7 +362,7 @@ describe('Visibility settings', () => {
     });
 
     it('blocks Save for an unfinished condition, and the issue link lands on the missing value', async () => {
-      const { user } = openBuilder([numberField('Nights'), textField('Note')]);
+      const { user } = await openBuilder([numberField('Nights'), textField('Note')]);
       await select(user, 'Note');
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
 
@@ -380,7 +380,7 @@ describe('Visibility settings', () => {
     });
 
     it('blocks Save when a range’s first number is more than its second (D-8)', async () => {
-      const { form, user } = openBuilder([numberField('Nights'), textField('Note')]);
+      const { form, user } = await openBuilder([numberField('Nights'), textField('Note')]);
       await select(user, 'Note');
       await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
       await user.selectOptions(
@@ -405,7 +405,7 @@ describe('Visibility settings', () => {
       const gone = numberField('Nights');
       const reason = textField('Approval reason');
       reason.logic.show = group('all', condition(gone.id, { kind: 'number', op: 'gt', value: 3 }));
-      const { user } = openBuilder([textField('Purpose'), reason]);
+      const { user } = await openBuilder([textField('Purpose'), reason]);
 
       await select(user, 'Approval reason');
       const target = showGroup().getByRole('combobox', { name: 'Show condition 1: field' });
@@ -427,7 +427,7 @@ describe('Visibility settings', () => {
   it('has no axe violations with both groups filled in and a disabled target', async () => {
     const { type, nights, reason } = expenseChain();
     const purpose = textField('Purpose');
-    const { user } = openBuilder([purpose, type, nights, reason]);
+    const { user } = await openBuilder([purpose, type, nights, reason]);
     await select(user, 'Expense type');
     await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
     await user.click(hideGroup().getByRole('button', { name: 'Add a hide condition' }));

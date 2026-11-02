@@ -22,7 +22,7 @@ describe('v0.2 demo: fill and submit', () => {
     name.logic.defaultRequired = true;
     const claim = template([name, textField('Notes')], 'Expense claim');
     createRepositories(localStorage).templates.put(claim);
-    const { user } = renderApp('/');
+    const { user } = await renderApp('/');
 
     // 1. Open "Expense claim" → New response. Submit empty: the error summary takes focus.
     await user.click(await card('Expense claim').findByRole('link', { name: /^New response/ }));
@@ -62,7 +62,7 @@ describe('v0.2 demo: fill and submit', () => {
   it('disables New response, with the reason, for a template with no fields', async () => {
     createRepositories(localStorage).templates.put(template([], 'Empty form'));
 
-    renderApp('/');
+    await renderApp('/');
 
     const button = await card('Empty form').findByRole('button', { name: /^New response/ });
     expect(button).toBeDisabled();

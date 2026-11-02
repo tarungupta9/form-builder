@@ -47,7 +47,7 @@ describe('v0.5 demo: choice fields', () => {
   });
 
   it('builds one single select per display and a multi select, fills them in, and keeps old labels after a rename', async () => {
-    const { user, unmount } = renderApp('/templates/new');
+    const { user, unmount } = await renderApp('/templates/new');
 
     // Build: the same single select three times, once per display, and a multi select.
     await setTitle(user, 'Expense claim');
@@ -65,7 +65,7 @@ describe('v0.5 demo: choice fields', () => {
 
     // A full refresh keeps everything; the card counts the four fields.
     unmount();
-    const { user: respondent } = renderApp('/');
+    const { user: respondent } = await renderApp('/');
     expect(await card('Expense claim').findByText('4 fields')).toBeInTheDocument();
     await respondent.click(card('Expense claim').getByRole('link', { name: /^New response/ }));
 

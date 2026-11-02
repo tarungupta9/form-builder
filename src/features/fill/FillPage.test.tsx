@@ -43,7 +43,7 @@ describe('Fill page', () => {
     const { form } = expenseClaim();
     saveTemplate(form);
 
-    renderApp(`/templates/${form.id}/respond`);
+    await renderApp(`/templates/${form.id}/respond`);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Expense claim' })).toBeVisible();
     expect(screen.getByText('Travel only.')).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe('Fill page', () => {
   it('blocks submit and focuses the error summary when a required field is empty', async () => {
     const { form } = expenseClaim();
     saveTemplate(form);
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
 
     await user.click(await screen.findByRole('button', { name: 'Submit response' }));
 
@@ -74,7 +74,7 @@ describe('Fill page', () => {
   it('moves focus to the field when its error link is followed', async () => {
     const { form } = expenseClaim();
     saveTemplate(form);
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.click(await screen.findByRole('button', { name: 'Submit response' }));
 
     await user.click(screen.getByRole('button', { name: 'Enter an answer for Purpose' }));
@@ -85,7 +85,7 @@ describe('Fill page', () => {
   it('clears an error as soon as the field is fixed after a failed submit', async () => {
     const { form } = expenseClaim();
     saveTemplate(form);
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.click(await screen.findByRole('button', { name: 'Submit response' }));
     const name = screen.getByRole('textbox', { name: /Employee name/ });
 
@@ -99,7 +99,7 @@ describe('Fill page', () => {
   it('does not show errors while the respondent is still typing, before any submit', async () => {
     const { form } = expenseClaim();
     saveTemplate(form);
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
 
     await user.type(await screen.findByRole('textbox', { name: /Notes/ }), 'Hi');
 
@@ -109,7 +109,7 @@ describe('Fill page', () => {
   it('submits, stores a snapshot of the form, and confirms with focus on the outcome', async () => {
     const { form, name } = expenseClaim();
     saveTemplate(form);
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.type(await screen.findByRole('textbox', { name: /Employee name/ }), 'Ada');
     await user.type(screen.getByRole('textbox', { name: /Purpose/ }), 'Conference');
 
@@ -131,7 +131,7 @@ describe('Fill page', () => {
   it('starts a fresh, empty form after “Fill in another response”', async () => {
     const notes = textField('Notes');
     const form = saveTemplate(template([notes]));
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.type(await screen.findByRole('textbox', { name: 'Notes' }), 'First');
     await user.click(screen.getByRole('button', { name: 'Submit response' }));
 
@@ -144,7 +144,7 @@ describe('Fill page', () => {
   it('keeps the answers and shows "Storage is full" when submitting hits the quota', async () => {
     const notes = textField('Notes');
     const form = saveTemplate(template([notes]));
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.type(await screen.findByRole('textbox', { name: 'Notes' }), 'Keep me');
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError');
@@ -159,7 +159,7 @@ describe('Fill page', () => {
   it('keeps the form as it was opened when the template is changed in another tab', async () => {
     const notes = textField('Notes');
     const form = saveTemplate(template([notes]));
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.type(await screen.findByRole('textbox', { name: 'Notes' }), 'Typed');
 
     changeInAnotherTab(() => {
@@ -175,7 +175,7 @@ describe('Fill page', () => {
   it('refuses to submit, keeping the answers, when the template was deleted in another tab', async () => {
     const notes = textField('Notes');
     const form = saveTemplate(template([notes]));
-    const { user } = renderApp(`/templates/${form.id}/respond`);
+    const { user } = await renderApp(`/templates/${form.id}/respond`);
     await user.type(await screen.findByRole('textbox', { name: 'Notes' }), 'Typed');
 
     changeInAnotherTab(() => {
@@ -191,7 +191,7 @@ describe('Fill page', () => {
   it('explains that a template with no fields cannot be filled in yet', async () => {
     const form = saveTemplate(template([]));
 
-    renderApp(`/templates/${form.id}/respond`);
+    await renderApp(`/templates/${form.id}/respond`);
 
     expect(
       await screen.findByRole('heading', { name: 'This form has no fields yet' }),
@@ -204,13 +204,13 @@ describe('Fill page', () => {
   });
 
   it('shows Not found for a template that does not exist', async () => {
-    renderApp(`/templates/${newTemplateId()}/respond`);
+    await renderApp(`/templates/${newTemplateId()}/respond`);
 
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeVisible();
   });
 
   it('shows Not found for a malformed template ID', async () => {
-    renderApp('/templates/not-an-id/respond');
+    await renderApp('/templates/not-an-id/respond');
 
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeVisible();
   });
@@ -218,7 +218,7 @@ describe('Fill page', () => {
   it('names the page after the form', async () => {
     const form = saveTemplate(template([textField('Notes')], 'Expense claim'));
 
-    renderApp(`/templates/${form.id}/respond`);
+    await renderApp(`/templates/${form.id}/respond`);
 
     await waitFor(() => {
       expect(document.title).toBe('New response: Expense claim – Form builder');
@@ -228,7 +228,7 @@ describe('Fill page', () => {
   it('has no axe violations in its empty, failed-submit and submitted states', async () => {
     const { form } = expenseClaim();
     saveTemplate(form);
-    const { user, container } = renderApp(`/templates/${form.id}/respond`);
+    const { user, container } = await renderApp(`/templates/${form.id}/respond`);
 
     await screen.findByRole('button', { name: 'Submit response' });
     await expectNoAxeViolations(container);

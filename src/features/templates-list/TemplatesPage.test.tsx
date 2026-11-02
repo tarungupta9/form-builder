@@ -7,7 +7,7 @@ import { toIsoDateTime } from '../../domain/ids';
 
 describe('Templates page', () => {
   it('shows the empty state when there are no templates', async () => {
-    renderApp('/');
+    await renderApp('/');
 
     expect(
       await screen.findByRole('heading', { name: 'Create your first template' }),
@@ -25,7 +25,7 @@ describe('Templates page', () => {
     };
     createRepositories(localStorage).templates.put(saved);
 
-    renderApp('/');
+    await renderApp('/');
 
     const card = (await screen.findByRole('heading', { name: 'Expense claim' })).closest('li')!;
     const scope = within(card);
@@ -41,7 +41,7 @@ describe('Templates page', () => {
     const saved = template([textField('Name')], 'Expense claim');
     createRepositories(localStorage).templates.put(saved);
 
-    renderApp('/');
+    await renderApp('/');
 
     expect(
       await screen.findByRole('link', { name: /^View responses\s*: Expense claim$/ }),
@@ -55,7 +55,7 @@ describe('Templates page', () => {
     repositories.templates.put(older);
     repositories.templates.put(newer);
 
-    renderApp('/');
+    await renderApp('/');
 
     const headings = await screen.findAllByRole('heading', { level: 2 });
     expect(headings.map((heading) => heading.textContent)).toEqual(['Newer', 'Older']);
@@ -64,7 +64,7 @@ describe('Templates page', () => {
   it('shows an error naming the backup key when stored templates are corrupt, and does not overwrite them', async () => {
     localStorage.setItem(STORAGE_KEYS.templates, '{bad');
 
-    renderApp('/');
+    await renderApp('/');
 
     expect(
       await screen.findByRole('heading', { name: 'Your saved data could not be read' }),
@@ -83,7 +83,7 @@ describe('Templates page', () => {
     });
     localStorage.setItem(STORAGE_KEYS.templates, raw);
 
-    renderApp('/');
+    await renderApp('/');
 
     expect(await screen.findByRole('heading', { name: 'Expense claim' })).toBeVisible();
     const notice = screen.getByRole('region', { name: '1 saved template could not be read' });
@@ -101,7 +101,7 @@ describe('Templates page', () => {
       JSON.stringify({ schemaVersion: 1, items: { [kept.id]: kept, a: null, b: 'x' } }),
     );
 
-    renderApp('/');
+    await renderApp('/');
 
     expect(
       await screen.findByRole('region', { name: '2 saved responses could not be read' }),
@@ -112,7 +112,7 @@ describe('Templates page', () => {
 
   it('starts again with an empty list once the corrupt data is backed up, keeping the backup', async () => {
     localStorage.setItem(STORAGE_KEYS.templates, '{bad');
-    const { user } = renderApp('/');
+    const { user } = await renderApp('/');
 
     await user.click(await screen.findByRole('button', { name: 'Start again with no templates' }));
 
@@ -132,7 +132,7 @@ describe('Templates page', () => {
     repositories.responses.put(submittedResponse(claim));
     repositories.responses.put(submittedResponse(claim));
 
-    renderApp('/');
+    await renderApp('/');
 
     const card = (name: string) => within(screen.getByRole('heading', { name }).closest('li')!);
     await screen.findByRole('heading', { name: 'Expense claim' });
@@ -144,7 +144,7 @@ describe('Templates page', () => {
     const saved = template([textField('Name')], 'Expense claim');
     createRepositories(localStorage).templates.put(saved);
 
-    const { user } = renderApp('/');
+    const { user } = await renderApp('/');
     await user.click(await screen.findByRole('link', { name: /^New response\s*: Expense claim$/ }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Expense claim' })).toHaveFocus();
@@ -154,7 +154,7 @@ describe('Templates page', () => {
   it('disables New response with a reason for a template with no fields', async () => {
     createRepositories(localStorage).templates.put(template([], 'Empty form'));
 
-    renderApp('/');
+    await renderApp('/');
 
     const button = await screen.findByRole('button', { name: /^New response\s*: Empty form$/ });
     expect(button).toBeDisabled();
@@ -165,7 +165,7 @@ describe('Templates page', () => {
     createRepositories(localStorage).templates.put(template([textField('Name')]));
     localStorage.setItem(STORAGE_KEYS.responses, '{bad');
 
-    renderApp('/');
+    await renderApp('/');
 
     expect(
       await screen.findByRole('heading', { name: 'Your saved data could not be read' }),

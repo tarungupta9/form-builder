@@ -36,7 +36,7 @@ describe('v0.4 demo: long text, number, date and section header', () => {
   });
 
   it('builds one of each type, rejects invalid answers, submits, and exports each one', async () => {
-    const { user } = renderApp('/templates/new');
+    const { user } = await renderApp('/templates/new');
     await user.click(screen.getByRole('button', { name: 'Edit title and description' }));
     const details = within(screen.getByRole('dialog', { name: 'Title and description' }));
     await user.type(details.getByRole('textbox', { name: 'Title' }), 'Travel claim');
@@ -134,7 +134,7 @@ describe('v0.4 demo: long text, number, date and section header', () => {
       const form = template([dateField('Date of travel', { prefillToday: true })], 'Day trip');
       createRepositories(localStorage).templates.put(form);
 
-      renderApp(`/templates/${form.id}/respond`);
+      await renderApp(`/templates/${form.id}/respond`);
 
       expect(await screen.findByLabelText('Date of travel')).toHaveValue('2026-11-01');
     });

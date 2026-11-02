@@ -41,7 +41,7 @@ describe('v0.3 demo: responses and PDF', () => {
       description: 'Travel and meals only.',
     };
     createRepositories(localStorage).templates.put(claim);
-    const { user } = renderApp('/');
+    const { user } = await renderApp('/');
 
     // 1. Submit two responses, the second with the optional Notes left empty.
     const firstSubmittedAt = new Date('2026-11-01T09:00:00Z');
