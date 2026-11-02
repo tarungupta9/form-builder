@@ -1,7 +1,13 @@
-/* Palette | canvas | config on wide screens; one column, in that order, on narrow ones. */
+/*
+ * Palette | canvas | config on wide screens; one column, in that order, on narrow ones.
+ * The canvas and config share the width 3 : 2, so they shrink together (ADR 0021). A fixed-size
+ * config track would be filled first and leave the canvas to absorb all of the shrinking. The
+ * config floor of 340 px keeps its two-column rows (min / max, condition rows) side by side.
+ * The palette stops growing at 220 px: its buttons need no more.
+ */
 .layout {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(280px, 380px);
+  grid-template-columns: minmax(180px, 220px) minmax(0, 3fr) minmax(340px, 2fr);
   gap: var(--space-5);
   align-items: start;
 }
@@ -9,6 +15,45 @@
 @media (max-width: 1000px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/*
+ * Workspace layout (ADR 0021): the shell gives the page the viewport's height, and the three
+ * panels share what is left below the heading. Each panel scrolls on its own, so a long
+ * settings panel never scrolls the field list out of view. The media query matches the
+ * shell's; `min-height` keeps the panels usable when an issue summary is tall, and the
+ * shell's own scroll takes the overflow.
+ */
+@media (min-width: 1001px) and (min-height: 600px) {
+  :global(main[data-layout='workspace']) .layout {
+    flex: 1;
+    align-items: stretch;
+    min-height: 360px;
+  }
+
+  :global(main[data-layout='workspace']) :is(.palette, .canvas, .config) {
+    /* Contains visually hidden text, which is absolutely positioned, so it scrolls and clips
+       with its panel instead of stretching the page from wherever it would sit unscrolled. */
+    position: relative;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* An item scrolled into view by focus() stops below the sticky title, not under it. */
+    scroll-padding-top: calc(var(--space-5) + 24px + var(--space-3) + var(--space-2));
+    scroll-padding-bottom: var(--space-5);
+  }
+
+  /* The title stays at the top of its scrolling panel, so the panel never loses its name. */
+  :global(main[data-layout='workspace']) .panelTitle {
+    position: sticky;
+    /* Sticky offsets count from inside the panel's padding, so this pins it to the very top. */
+    top: calc(-1 * var(--space-5));
+    z-index: 2;
+    /* Bleeds over the panel padding so content scrolls out of sight under it, not above it. */
+    margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) calc(-1 * var(--space-3));
+    padding: var(--space-5) var(--space-5) var(--space-3);
+    background: var(--color-surface);
   }
 }
 
@@ -159,9 +204,13 @@
   align-items: flex-start;
   gap: 2px;
   min-width: 0;
-  padding: var(--space-3) var(--space-4);
+  /*
+   * A real 1 px border all round, so an unselected card has a visible left edge; selection
+   * widens the left edge to 4 px and takes the 3 px back from the padding, so the content never
+   * shifts. Borders, not box-shadow, so both survive forced-colours mode.
+   */
+  padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + 3px);
   border: 1px solid var(--color-border);
-  border-left: 4px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface-sunken);
   text-align: left;
@@ -174,7 +223,8 @@
 
 /* Selection is shown by the left bar and the tint, not by colour of text alone. */
 .canvasSelect[aria-pressed='true'] {
-  border-left-color: var(--color-primary);
+  padding-left: var(--space-4);
+  border-left: 4px solid var(--color-primary);
   background: var(--color-tint-strong);
 }
 

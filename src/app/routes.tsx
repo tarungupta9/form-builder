@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router';
 import { TemplatesPage } from '../features/templates-list/TemplatesPage';
 import { AppShell } from './AppShell';
 import { NotFound } from './NotFound';
+import { WORKSPACE_ROUTE } from './pageLayout';
 import { RouteError } from './RouteError';
 
 /*
@@ -30,8 +31,9 @@ export const routes: RouteObject[] = [
     errorElement: <RouteError />,
     children: [
       { index: true, element: <TemplatesPage /> },
-      { path: 'templates/new', element: <BuilderPage /> },
-      { path: 'templates/:templateId/edit', element: <BuilderPage /> },
+      // The builder fills the viewport and scrolls its panels, not the page (ADR 0021).
+      { path: 'templates/new', element: <BuilderPage />, handle: WORKSPACE_ROUTE },
+      { path: 'templates/:templateId/edit', element: <BuilderPage />, handle: WORKSPACE_ROUTE },
       { path: 'templates/:templateId/respond', element: <FillPage /> },
       { path: 'templates/:templateId/responses', element: <ResponsesPage /> },
       // The same page as `respond`, so the first input can move a new response to its own URL

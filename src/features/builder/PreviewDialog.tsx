@@ -82,19 +82,20 @@ function PreviewBody({ template, onClose }: { template: FormTemplate; onClose: (
           </div>
         </section>
       ) : (
-        <>
-          <FillForm
-            key={round}
-            template={template}
-            onSubmit={() => {
-              setSubmitted(true);
-              return ok(undefined);
-            }}
-          />
-          <div className={styles.dialogActions}>
-            <Button onClick={onClose}>Close preview</Button>
-          </div>
-        </>
+        // Close shares Submit's row rather than taking a row of its own below the form.
+        <FillForm
+          key={round}
+          template={template}
+          onSubmit={() => {
+            setSubmitted(true);
+            return ok(undefined);
+          }}
+          secondaryAction={
+            <Button size="lg" onClick={onClose}>
+              Close preview
+            </Button>
+          }
+        />
       )}
     </div>
   );

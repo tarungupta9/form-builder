@@ -12,6 +12,7 @@ import { toIsoDateTime } from '../../domain/ids';
 import { createRepositories } from '../../storage/repositories';
 import { formatDateTime } from '../../ui/format';
 import { template, textField } from '../fixtures';
+import { chooseCardAction } from '../cardMenu';
 import { renderApp } from '../renderApp';
 
 vi.mock('../../features/export/printDocument', () => ({ printDocument: vi.fn() }));
@@ -81,7 +82,7 @@ describe('v0.3 demo: responses and PDF', () => {
 
     // 3. Rename the field and save. Re-download the older response: it shows the old label.
     await user.click(screen.getByRole('link', { name: 'All templates' }));
-    await user.click(await card('Expense claim').findByRole('link', { name: /^Open in builder/ }));
+    await chooseCardAction(user, 'Expense claim', 'Open in builder');
     await user.click(await screen.findByRole('button', { name: /^Employee name/ }));
     const label = screen.getByRole('textbox', { name: 'Label' });
     await user.clear(label);
@@ -90,7 +91,7 @@ describe('v0.3 demo: responses and PDF', () => {
     await screen.findByText(/Last saved/);
 
     await user.click(screen.getByRole('link', { name: 'All templates' }));
-    await user.click(await card('Expense claim').findByRole('link', { name: /^View responses/ }));
+    await chooseCardAction(user, 'Expense claim', 'View responses');
     const older = within(await screen.findByRole('list', { name: '2 submitted responses' }))
       .getAllByRole('listitem')
       .at(-1)!;

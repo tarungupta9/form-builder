@@ -2,6 +2,7 @@ import { RouterProvider, type createBrowserRouter } from 'react-router';
 import { StorageProvider } from '../storage/StorageContext';
 import type { Repositories } from '../storage/repositories';
 import { LiveRegionProvider } from '../ui/LiveRegion';
+import { ToastProvider } from '../ui/Toast';
 
 interface AppProps {
   repositories: Repositories;
@@ -14,7 +15,10 @@ export function App({ repositories, router }: AppProps) {
   return (
     <StorageProvider repositories={repositories}>
       <LiveRegionProvider>
-        <RouterProvider router={router} />
+        {/* Outside the router, so a toast survives the redirect after saving a new template. */}
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </LiveRegionProvider>
     </StorageProvider>
   );

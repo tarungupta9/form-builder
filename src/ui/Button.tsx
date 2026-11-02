@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import { Link, type LinkProps } from 'react-router';
 import styles from './Button.module.css';
 import { Icon, type IconName } from './icons';
@@ -66,6 +66,8 @@ interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   icon: IconName;
   /** Required: an icon-only button has no other accessible name. */
   label: string;
+  /** For a caller that moves focus back to the button, as a menu does when it closes. */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function IconButton({ icon, label, className, type = 'button', ...rest }: IconButtonProps) {

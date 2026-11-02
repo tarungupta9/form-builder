@@ -1,0 +1,69 @@
+/* Spans the bottom of the viewport with 16px gutters; only the toast itself takes the pointer. */
+.viewport {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  left: var(--space-4);
+  /* Above the sticky header (5) and the skip link (10); a modal dialog's top layer still wins. */
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Surface-white on the text colour is about 16:1. The transparent border shows in forced colours. */
+.toast {
+  max-width: 480px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background: var(--color-text);
+  box-shadow: var(--shadow-dialog);
+  color: var(--color-surface);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 22px;
+  pointer-events: auto;
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  animation: enter 160ms ease-out;
+}
+
+.icon {
+  flex: none;
+  color: var(--color-tint-strong);
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .toast {
+    border-color: CanvasText;
+  }
+
+  .icon {
+    color: CanvasText;
+  }
+}
+
+/* A confirmation belongs to the screen, never to a printed page. */
+@media print {
+  .viewport {
+    display: none;
+  }
+}

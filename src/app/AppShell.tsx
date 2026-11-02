@@ -1,7 +1,8 @@
 import { Suspense, useLayoutEffect, useRef } from 'react';
-import { Link, Outlet, useLocation } from 'react-router';
+import { Link, Outlet, useLocation, useMatches } from 'react-router';
 import styles from './AppShell.module.css';
 import { keepsFocus } from './navigation';
+import { pageLayoutOf } from './pageLayout';
 import { PageLoading } from './PageLoading';
 
 /**
@@ -15,6 +16,9 @@ import { PageLoading } from './PageLoading';
  * Pages other than the home page load on first visit (ADR 0017). The router applies each
  * navigation in a transition, so in the app the old page stays until the new one is ready and
  * its `<h1>` exists to take focus; the loading status shows only on a cold load or refresh.
+ *
+ * A route can ask for the `workspace` layout through its `handle` (ADR 0021); the stylesheet
+ * applies it only on screens wide and tall enough for it.
  */
 export function AppShell() {
   const location = useLocation();
@@ -23,6 +27,7 @@ export function AppShell() {
   const state: unknown = location.state;
   const main = useRef<HTMLElement>(null);
   const isFirstRender = useRef(true);
+  const layout = pageLayoutOf(useMatches());
 
   // A layout effect, so focus moves in the same commit as the new page and never lands after
   // the user (or a test) has started typing in it, which a lazily loaded page made possible.
@@ -47,7 +52,7 @@ export function AppShell() {
           Form builder
         </Link>
       </header>
-      <main id="main" ref={main} className={styles.main}>
+      <main id="main" ref={main} className={styles.main} data-layout={layout}>
         <Suspense fallback={<PageLoading />}>
           <Outlet />
         </Suspense>

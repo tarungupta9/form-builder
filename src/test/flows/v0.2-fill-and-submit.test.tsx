@@ -6,6 +6,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import type { FormResponse } from '../../domain/response';
 import { createRepositories } from '../../storage/repositories';
 import { template, textField } from '../fixtures';
+import { chooseCardAction } from '../cardMenu';
 import { renderApp } from '../renderApp';
 
 const card = (title: string) =>
@@ -45,7 +46,7 @@ describe('v0.2 demo: fill and submit', () => {
     expect(await card('Expense claim').findByText('1 response')).toBeInTheDocument();
 
     // 4. Rename the field in the builder and save: the earlier response keeps the old label.
-    await user.click(card('Expense claim').getByRole('link', { name: /^Open in builder/ }));
+    await chooseCardAction(user, 'Expense claim', 'Open in builder');
     await user.click(await screen.findByRole('button', { name: /^Employee name/ }));
     const label = screen.getByRole('textbox', { name: 'Label' });
     await user.clear(label);

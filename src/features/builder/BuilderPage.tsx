@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router';
+import { useLocation, useParams } from 'react-router';
 import { NotFound } from '../../app/NotFound';
 import { usePageTitle } from '../../app/usePageTitle';
 import { newTemplateId, parseTemplateId, toIsoDateTime } from '../../domain/ids';
@@ -27,14 +27,22 @@ function blankTemplate(): FormTemplate {
  *
  * The template is kept as it was opened, as Fill does. If another tab deletes it meanwhile, the
  * builder stays open with the author's edits, and Save offers to save it again (HLD §4.5).
+ *
+ * Staying mounted has a cost: going from an edit URL straight to `/new` (an edited address bar)
+ * reuses this component too. So the blank template belongs to one visit to `/new`, told apart by
+ * the location's key, and a new visit gets a new one. Otherwise `/new` would reopen the template
+ * that blank had become on its first save, and saving there would overwrite it.
  */
 export function BuilderPage() {
   const { templateId: rawId } = useParams();
-  const [blank] = useState(blankTemplate);
+  const { key: visit } = useLocation();
+  const isNew = rawId === undefined;
+  const [blankVisit, setBlankVisit] = useState(() => ({ visit, blank: blankTemplate() }));
+  if (isNew && blankVisit.visit !== visit) setBlankVisit({ visit, blank: blankTemplate() });
+  const { blank } = blankVisit;
   const { templates } = useRepositories();
   const snapshot = useCollection(templates);
 
-  const isNew = rawId === undefined;
   const id = isNew ? blank.id : parseTemplateId(rawId);
   const stored = id && snapshot.ok ? snapshot.value.get(id) : undefined;
   const [opened, setOpened] = useState<FormTemplate | undefined>(stored);

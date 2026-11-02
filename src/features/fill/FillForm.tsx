@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, type SyntheticEvent, useEffect, useMemo, useState } from 'react';
 import type { ResponseValues, SubmittedResponse } from '../../domain/response';
 import type { FormTemplate } from '../../domain/template';
 import type { Result } from '../../storage/result';
@@ -25,6 +25,11 @@ interface FillFormProps {
    * Fill saves its draft from here; the form itself stores nothing, so Preview stays draft-free.
    */
   onValuesChange?: (values: ResponseValues) => void;
+  /**
+   * A control shown beside Submit, in the same row, such as Preview's Close. It sits before
+   * Submit so the primary action stays last, where the eye and the Tab order end.
+   */
+  secondaryAction?: ReactNode;
 }
 
 /**
@@ -32,7 +37,13 @@ interface FillFormProps {
  * are required come from `useFormRuntime`, re-evaluated on every change, so fields appear and
  * disappear as the respondent types; this component wires that to the screen and says so.
  */
-export function FillForm({ template, onSubmit, start, onValuesChange }: FillFormProps) {
+export function FillForm({
+  template,
+  onSubmit,
+  start,
+  onValuesChange,
+  secondaryAction,
+}: FillFormProps) {
   const { values, edited, evaluation, issues, setValue, submit } = useFormRuntime(template, start);
   const [saveError, setSaveError] = useState<SaveError | null>(null);
   const focusLater = useFocusRequest();
@@ -90,6 +101,7 @@ export function FillForm({ template, onSubmit, start, onValuesChange }: FillForm
       </div>
 
       <div className={styles.submitRow}>
+        {secondaryAction}
         <Button type="submit" variant="primary" size="lg">
           Submit response
         </Button>

@@ -1,0 +1,87 @@
+/* The anchor the menu hangs from; not a stacking context, so the menu's z-index competes page-wide. */
+.root {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.triggerOpen {
+  background: var(--color-tint-strong);
+  color: var(--color-primary);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  /* Above the cards that follow it, below the sticky app header (z-index 5) when scrolled. */
+  z-index: 3;
+  min-width: 200px;
+  padding: var(--space-1) 0;
+  /* A real border, not the shadow alone, so the menu keeps its edge under forced colours. */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-dialog);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  /* 40px: above the 24px of WCAG 2.5.8, and matches the card's small buttons. */
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* The focused item is tinted as well as ringed: focus that follows a click shows no ring. */
+.item:hover,
+.item:focus {
+  background: var(--color-tint);
+  color: var(--color-text);
+}
+
+/* Inside the menu, so neighbouring items do not cover the ring. */
+.item:focus-visible {
+  outline-offset: -3px;
+}
+
+.danger,
+.danger:hover,
+.danger:focus {
+  color: var(--color-danger);
+}
+
+.danger:hover,
+.danger:focus {
+  background: var(--color-danger-tint);
+}
+
+.separator {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--color-border-soft);
+}
+
+/* Forced colours drop the tint, so hover and focus need an edge of their own. */
+@media (forced-colors: active) {
+  .item:hover,
+  .item:focus {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .separator {
+    background: CanvasText;
+  }
+}

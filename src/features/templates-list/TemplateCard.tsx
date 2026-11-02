@@ -1,4 +1,5 @@
 import { type FormTemplate, acceptsResponses } from '../../domain/template';
+import { ActionMenu, type ActionMenuItem } from '../../ui/ActionMenu';
 import { Button, ButtonLink } from '../../ui/Button';
 import { formatDateTime, plural } from '../../ui/format';
 import { NO_FIELDS_REASON } from '../fill/noFieldsReason';
@@ -14,18 +15,47 @@ interface TemplateCardProps {
   onDelete: (template: FormTemplate) => void;
 }
 
-/** One template on the home page. Presentational: everything it shows comes from its props. */
+/**
+ * One template on the home page. Presentational: everything it shows comes from its props.
+ * New response is the card's one visible action; the rest wait in its menu (ADR 0020).
+ */
 export function TemplateCard({ template, responseCounts, onDelete }: TemplateCardProps) {
   // The title tells the cards' buttons apart; the visible words lead the name (WCAG 2.5.3).
   const forTitle = <span className="visually-hidden">: {template.title}</span>;
   const reasonId = `no-fields-${template.id}`;
   const canRespond = acceptsResponses(template);
 
+  // Item names need no title: the menu is named by its trigger, which carries it.
+  const secondaryActions: ActionMenuItem[] = [
+    { kind: 'link', label: 'Open in builder', to: `/templates/${template.id}/edit`, icon: 'edit' },
+    // Shown at 0 responses too: the empty responses page explains itself (G-11).
+    {
+      kind: 'link',
+      label: 'View responses',
+      to: `/templates/${template.id}/responses`,
+      icon: 'file',
+    },
+    { kind: 'separator' },
+    // On the card only, never in the builder, where it would meet the unsaved-changes guard (D8-9).
+    {
+      kind: 'action',
+      label: 'Delete',
+      icon: 'trash',
+      tone: 'danger',
+      onSelect: () => {
+        onDelete(template);
+      },
+    },
+  ];
+
   return (
     <li className={styles.card}>
-      <h2 id={cardTitleId(template)} tabIndex={-1} className={styles.cardTitle}>
-        {template.title}
-      </h2>
+      <div className={styles.titleRow}>
+        <h2 id={cardTitleId(template)} tabIndex={-1} className={styles.cardTitle}>
+          {template.title}
+        </h2>
+        <ActionMenu label={`More actions for ${template.title}`} items={secondaryActions} />
+      </div>
       {template.description && <p className={styles.description}>{template.description}</p>}
       <p className={styles.meta}>{plural(template.fields.length, 'field')}</p>
       <p className={styles.meta}>{describeCounts(responseCounts)}</p>
@@ -48,29 +78,6 @@ export function TemplateCard({ template, responseCounts, onDelete }: TemplateCar
             New response{forTitle}
           </Button>
         )}
-        <ButtonLink to={`/templates/${template.id}/edit`} variant="secondary" size="sm" icon="edit">
-          Open in builder{forTitle}
-        </ButtonLink>
-        {/* Shown at 0 responses too: the empty responses page explains itself (G-11). */}
-        <ButtonLink
-          to={`/templates/${template.id}/responses`}
-          variant="quiet"
-          size="sm"
-          icon="file"
-        >
-          View responses{forTitle}
-        </ButtonLink>
-        {/* On the card only, never in the builder, where it would meet the unsaved-changes guard (D8-9). */}
-        <Button
-          variant="dangerQuiet"
-          size="sm"
-          icon="trash"
-          onClick={() => {
-            onDelete(template);
-          }}
-        >
-          Delete{forTitle}
-        </Button>
       </div>
       {!canRespond && (
         <p id={reasonId} className={styles.meta}>

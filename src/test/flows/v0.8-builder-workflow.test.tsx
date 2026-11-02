@@ -19,6 +19,7 @@ import type { FormTemplate } from '../../domain/template';
 import { STORAGE_KEYS, createRepositories } from '../../storage/repositories';
 import { numberField, submittedResponse, template, textField, textareaField } from '../fixtures';
 import { stubListLayout } from '../layout';
+import { chooseCardAction } from '../cardMenu';
 import { renderApp } from '../renderApp';
 import { settleAnnouncements, startFakeClock } from '../timers';
 
@@ -127,7 +128,7 @@ describe('v0.8 demo: builder workflow', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Templates' })).toBeVisible();
 
     // 6. Delete Travel and its 2 responses.
-    await second.user.click(screen.getByRole('button', { name: /^Delete\s*: Travel$/ }));
+    await chooseCardAction(second.user, 'Travel', 'Delete');
     const confirm = within(screen.getByRole('dialog', { name: 'Delete Travel?' }));
     expect(confirm.getByText(/Its 2 responses will be deleted too/)).toBeVisible();
     await second.user.click(

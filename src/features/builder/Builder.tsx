@@ -13,12 +13,20 @@ import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FailureAlert } from '../../ui/ErrorSummary';
 import { useAnnounce } from '../../ui/LiveRegion';
 import { removedConditions } from '../../ui/RemovalDialog';
+import { useNotify } from '../../ui/Toast';
 import { PageHeader } from '../../ui/PageHeader';
 import { formatDateTime } from '../../ui/format';
 import styles from './Builder.module.css';
 import { insertionIndex } from './builderReducer';
 import { BuilderDragAndDrop } from './BuilderDragAndDrop';
-import { Canvas, type MoveDirection, canvasItemId, fieldName, moveButtonId } from './Canvas';
+import {
+  CANVAS_EMPTY_ID,
+  Canvas,
+  type MoveDirection,
+  canvasItemId,
+  fieldName,
+  moveButtonId,
+} from './Canvas';
 import { CONFIG_IDS } from './configIds';
 import { ConfigPanel } from './ConfigPanel';
 import type { ConditionWarning } from './conditions/conditionWarnings';
@@ -53,6 +61,7 @@ export function Builder({ initial, isNew }: BuilderProps) {
   const { template, selectedFieldId } = state;
   const navigate = useNavigate();
   const announce = useAnnounce();
+  const notify = useNotify();
   const focusLater = useFocusRequest();
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [storageError, setStorageError] = useState<StorageError | null>(null);
@@ -79,6 +88,9 @@ export function Builder({ initial, isNew }: BuilderProps) {
 
   const selectedField = template.fields.find((field) => field.id === selectedFieldId) ?? null;
   const heading = template.title.trim() || 'Untitled template';
+  // Checked here rather than through `acceptsResponses`: Preview needs a field to show, and must
+  // not change if the rules for taking responses do.
+  const hasFields = template.fields.length > 0;
 
   /** A palette click adds after the selection and says so; a palette drop gives `at`, and dnd-kit says it. */
   const addField = (type: FieldType, at?: number) => {
@@ -172,7 +184,7 @@ export function Builder({ initial, isNew }: BuilderProps) {
         return;
       case 'saved':
         setSaveAttempted(false);
-        announce('Template saved');
+        notify('Template saved');
         if (isNew) {
           void navigate(`/templates/${outcome.template.id}/edit`, {
             replace: true,
@@ -202,10 +214,14 @@ export function Builder({ initial, isNew }: BuilderProps) {
             <ButtonLink to="/" variant="quiet" icon="back">
               All templates
             </ButtonLink>
-            {/* Allowed while Save is blocked: authors preview mid-edit (D8-4). */}
+            {/* Allowed while Save is blocked: authors preview mid-edit (D8-4). Only an empty
+                form has nothing to preview (D-36). A disabled button cannot take focus, so its
+                reason is the canvas's visible empty message, not a tooltip. */}
             <Button
               id={PREVIEW_TRIGGER_ID}
               icon="eye"
+              disabled={!hasFields}
+              aria-describedby={hasFields ? undefined : CANVAS_EMPTY_ID}
               onClick={() => {
                 setPreviewed(template);
               }}

@@ -7,9 +7,9 @@ import type { StorageError } from '../../storage/result';
 import { describeStorageError } from '../../storage/storageMessages';
 import { ButtonLink } from '../../ui/Button';
 import { FailureAlert } from '../../ui/ErrorSummary';
-import { useAnnounce } from '../../ui/LiveRegion';
 import { PageHeader } from '../../ui/PageHeader';
 import { plural } from '../../ui/format';
+import { useNotify } from '../../ui/Toast';
 import { SetAsideNotice } from '../storage-error/SetAsideNotice';
 import { StorageErrorPanel } from '../storage-error/StorageErrorPanel';
 import { DeleteTemplateDialog, type PendingDeletion } from './DeleteTemplateDialog';
@@ -29,7 +29,7 @@ export function TemplatesPage() {
   const responseCounts = useResponseCounts();
   const templatesSetAside = useSetAside(repository);
   const responsesSetAside = useSetAside(responseRepository);
-  const announce = useAnnounce();
+  const notify = useNotify();
   const [deletion, setDeletion] = useState<PendingDeletion | null>(null);
   const [deleteError, setDeleteError] = useState<StorageError | null>(null);
 
@@ -50,7 +50,7 @@ export function TemplatesPage() {
     setDeletion((pending) => pending && { ...pending, open: false });
   };
 
-  /** The dialog moves focus as it closes, to the neighbour or back to Delete; nothing else does. */
+  /** The dialog moves focus on close: to the neighbour, or back to the card's menu (ADR 0020). */
   const confirmDeletion = ({ template, responseCounts }: PendingDeletion) => {
     const responseCount = responseCounts.submitted + responseCounts.inProgress;
     const deleted = deleteTemplate(repositories, template.id);
@@ -59,7 +59,7 @@ export function TemplatesPage() {
       setDeleteError(deleted.error);
       return;
     }
-    announce(
+    notify(
       responseCount > 0
         ? `Deleted ${template.title} and its ${plural(responseCount, 'response')}.`
         : `Deleted ${template.title}.`,

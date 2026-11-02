@@ -36,10 +36,34 @@
   text-decoration: underline;
 }
 
+/*
+ * Below the frame width a page uses the whole screen; above it, it is centred. Box-sizing is
+ * border-box everywhere, so the cap includes this padding: the content is 48 px narrower.
+ */
 .main {
-  max-width: 1280px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
   padding: var(--space-8) var(--space-6) var(--space-12);
+}
+
+/*
+ * A workspace page (ADR 0021) fills the viewport below the sticky header and scrolls its own
+ * panels, so the page itself does not scroll. Only where the screen is wide enough for the
+ * panels side by side and tall enough for each to show a useful amount; elsewhere it is an
+ * ordinary page. It keeps the shared page frame's width, so its edges line up with every other
+ * page. `overflow: auto` is a safety net for content that cannot shrink to fit.
+ */
+@media (min-width: 1001px) and (min-height: 600px) {
+  .main[data-layout='workspace'] {
+    /* Contains absolutely positioned descendants, so none can make the page itself scroll. */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--header-height));
+    padding-top: var(--space-5);
+    padding-bottom: var(--space-5);
+    overflow: auto;
+  }
 }
 
 @media (max-width: 640px) {

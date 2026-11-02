@@ -163,6 +163,21 @@ describe('Preview', () => {
     });
   });
 
+  it('offers Close preview right before Submit, and closing never submits the form', async () => {
+    const form = seedClaim();
+    const { user } = await renderApp(`/templates/${form.id}/edit`);
+    await openPreview(user);
+    const close = preview().getByRole('button', { name: 'Close preview' });
+
+    close.focus();
+    await user.tab();
+    expect(preview().getByRole('button', { name: 'Submit response' })).toHaveFocus();
+
+    await user.click(close);
+    expect(screen.queryByRole('dialog', { name: /^Preview:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /before submitting/ })).not.toBeInTheDocument();
+  });
+
   it('opens while Save is blocked, with a blank label and a blank option', async () => {
     const blankLabel = textField('');
     const choice = singleSelectField('Payment method', {

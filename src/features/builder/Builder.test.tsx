@@ -1,5 +1,6 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
+import { chooseCardAction } from '../../test/cardMenu';
 import { renderApp } from '../../test/renderApp';
 import { definitionFor } from '../../fields/registry';
 import { createRepositories } from '../../storage/repositories';
@@ -31,6 +32,33 @@ async function setDetails(user: UserEvent, title: string, description = '') {
 }
 
 describe('Builder', () => {
+  it('opens a blank template, and never overwrites the saved one, when the URL goes from a template’s edit page straight to /templates/new', async () => {
+    const { user, router } = await renderApp('/templates/new');
+    await setDetails(user, 'Expense claim');
+    await user.click(screen.getByRole('button', { name: 'Add Short text' }));
+    await user.type(screen.getByRole('textbox', { name: 'Label' }), 'Employee name');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toMatch(/\/edit$/);
+    });
+
+    // As when the author edits the hash in the address bar: the builder route stays mounted.
+    await act(() => router.navigate('/templates/new'));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Untitled template' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/No fields yet/)).toBeInTheDocument();
+    await setDetails(user, 'Travel request');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toMatch(/\/edit$/);
+    });
+    const stored = createRepositories(localStorage).templates.snapshot();
+    const titles = stored.ok ? [...stored.value.values()].map((saved) => saved.title) : [];
+    expect(titles.sort()).toEqual(['Expense claim', 'Travel request']);
+  });
+
   it('creates a template, saves it, and lists it after a reload', async () => {
     const first = await renderApp('/templates/new');
     const { user, router } = first;
@@ -55,9 +83,7 @@ describe('Builder', () => {
     expect(within(card).getByText('For staff expenses')).toBeInTheDocument();
     expect(within(card).getByText('1 field')).toBeInTheDocument();
 
-    await second.user.click(
-      within(card).getByRole('link', { name: /^Open in builder\s*: Expense claim$/ }),
-    );
+    await chooseCardAction(second.user, 'Expense claim', 'Open in builder');
     expect(await canvas().findByText('Employee name')).toBeInTheDocument();
     expect(canvas().getByText('Required')).toBeInTheDocument();
   });
@@ -239,6 +265,45 @@ describe('Builder', () => {
 
     expect(canvas().queryByText('Name')).not.toBeInTheDocument();
     expect(canvas().getByRole('button', { name: /^Email/ })).toHaveFocus();
+  });
+
+  describe('Preview with no fields (D-36)', () => {
+    const previewButton = () => screen.getByRole('button', { name: 'Preview' });
+    const EMPTY_REASON = 'No fields yet. Choose a field type to add the first one.';
+
+    it('keeps Preview disabled, with the reason, until the template has a field', async () => {
+      const { user } = await renderApp('/templates/new');
+
+      expect(previewButton()).toBeDisabled();
+      expect(previewButton()).toHaveAccessibleDescription(EMPTY_REASON);
+
+      await user.click(screen.getByRole('button', { name: 'Add Short text' }));
+
+      expect(previewButton()).toBeEnabled();
+      expect(previewButton()).not.toHaveAccessibleDescription();
+    });
+
+    it('enables Preview on opening a saved template that has fields', async () => {
+      const saved = template([textField('Name')]);
+      createRepositories(localStorage).templates.put(saved);
+      await renderApp(`/templates/${saved.id}/edit`);
+
+      expect(previewButton()).toBeEnabled();
+      expect(previewButton()).not.toHaveAccessibleDescription();
+    });
+
+    it('disables Preview again when the last field is removed, and keeps focus on the canvas', async () => {
+      const saved = template([textField('Name')]);
+      createRepositories(localStorage).templates.put(saved);
+      const { user } = await renderApp(`/templates/${saved.id}/edit`);
+
+      await user.click(await screen.findByRole('button', { name: 'Remove Name' }));
+
+      expect(previewButton()).toBeDisabled();
+      expect(previewButton()).toHaveAccessibleDescription(EMPTY_REASON);
+      // The pressed Remove button is gone; focus lands on the canvas heading, never on <body>.
+      expect(screen.getByRole('heading', { name: 'Fields' })).toHaveFocus();
+    });
   });
 
   describe('removing a field others read (D-12)', () => {
@@ -475,5 +540,31 @@ describe('Builder', () => {
     const renderedLabels = summarize.mock.calls.map(([field]) => field.label);
     expect(renderedLabels).toContain('Destinations');
     expect(renderedLabels.filter((label) => label !== 'Destinations')).toEqual([]);
+  });
+
+  it('shows a "Template saved" confirmation after a successful save, and announces it', async () => {
+    const { user, router } = await renderApp('/templates/new');
+    await setDetails(user, 'Expense claim');
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    // The toast is created by the save and must survive the redirect to the saved template's URL.
+    await waitFor(() => {
+      expect(router.state.location.pathname).toMatch(/^\/templates\/[0-9a-f-]+\/edit$/);
+    });
+    expect(screen.getByTestId('toast')).toHaveTextContent('Template saved');
+    await waitFor(() => {
+      expect(screen.getByTestId('live-region')).toHaveTextContent('Template saved');
+    });
+  });
+
+  it('shows no confirmation when Save is blocked', async () => {
+    // A new template has no title yet, so Save shows the issues instead of saving.
+    const { user } = await renderApp('/templates/new');
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('alert')).toBeVisible();
+    expect(screen.queryByTestId('toast')).not.toBeInTheDocument();
   });
 });

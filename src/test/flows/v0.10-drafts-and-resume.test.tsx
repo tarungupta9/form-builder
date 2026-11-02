@@ -12,6 +12,7 @@ import type { FormResponse } from '../../domain/response';
 import { AUTOSAVE_DELAY_MS } from '../../features/fill/useDraftAutosave';
 import { createRepositories } from '../../storage/repositories';
 import { singleSelectField, template, textField } from '../fixtures';
+import { chooseCardAction } from '../cardMenu';
 import { renderApp } from '../renderApp';
 import { startFakeClock } from '../timers';
 
@@ -66,7 +67,7 @@ describe('v0.10 demo: drafts and resume', () => {
     expect(card('Expense claim').getByText('0 responses · 1 in progress')).toBeVisible();
 
     // 3. Resume from In progress.
-    await app.user.click(card('Expense claim').getByRole('link', { name: /^View responses/ }));
+    await chooseCardAction(app.user, 'Expense claim', 'View responses');
     await app.user.click((await drafts()).getByRole('link', { name: /^Resume/ }));
     expect(await screen.findByRole('textbox', { name: 'Employee name' })).toHaveValue(
       'Ada Lovelace',
@@ -75,7 +76,7 @@ describe('v0.10 demo: drafts and resume', () => {
 
     // 4. Delete the option the draft used, then resume: the notice shows and the answer is empty.
     await app.user.click(screen.getByRole('link', { name: 'All templates' }));
-    await app.user.click(card('Expense claim').getByRole('link', { name: /^Open in builder/ }));
+    await chooseCardAction(app.user, 'Expense claim', 'Open in builder');
     await app.user.click(await screen.findByRole('button', { name: /^Payment method/ }));
     await app.user.click(screen.getByRole('button', { name: 'Remove Card' }));
     await app.user.click(screen.getByRole('button', { name: 'Save' }));
@@ -92,7 +93,7 @@ describe('v0.10 demo: drafts and resume', () => {
 
     // 5. Discard the draft, after confirming.
     await app.user.click(screen.getByRole('link', { name: 'All templates' }));
-    await app.user.click(card('Expense claim').getByRole('link', { name: /^View responses/ }));
+    await chooseCardAction(app.user, 'Expense claim', 'View responses');
     await app.user.click((await drafts()).getByRole('button', { name: /^Discard/ }));
     await app.user.click(screen.getByRole('button', { name: 'Discard response' }));
     expect(screen.queryByRole('list', { name: 'In progress' })).not.toBeInTheDocument();

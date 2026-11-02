@@ -11,6 +11,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import type { ExportDocument } from '../../features/export/exportModel';
 import { printDocument } from '../../features/export/printDocument';
+import { chooseCardAction } from '../cardMenu';
 import { renderApp } from '../renderApp';
 
 vi.mock('../../features/export/printDocument', () => ({ printDocument: vi.fn() }));
@@ -121,9 +122,7 @@ describe('v0.5 demo: choice fields', () => {
 
       // Rename the radio field's chosen option and save.
       await respondent.click(screen.getByRole('link', { name: 'All templates' }));
-      await respondent.click(
-        await card('Expense claim').findByRole('link', { name: /^Open in builder/ }),
-      );
+      await chooseCardAction(respondent, 'Expense claim', 'Open in builder');
       await respondent.click(await canvas().findByRole('button', { name: /^Paid by radio/ }));
       const option2 = screen.getByRole('textbox', { name: 'Option 2 label' });
       await respondent.clear(option2);
@@ -132,9 +131,7 @@ describe('v0.5 demo: choice fields', () => {
 
       // Re-download the earlier response: it keeps the label it was answered with (D-10).
       await respondent.click(screen.getByRole('link', { name: 'All templates' }));
-      await respondent.click(
-        await card('Expense claim').findByRole('link', { name: /^View responses/ }),
-      );
+      await chooseCardAction(respondent, 'Expense claim', 'View responses');
       const row = within(await screen.findByRole('list', { name: '1 submitted response' }));
       print.mockClear();
       await respondent.click(row.getByRole('button', { name: /^Re-download PDF/ }));

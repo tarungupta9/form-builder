@@ -13,6 +13,12 @@ import { CANVAS_DROP_ID, dragSourceOf } from './dragAndDrop';
 /** The canvas item's DOM ID, for moving focus to a field. */
 export const canvasItemId = (fieldId: FieldId): string => `canvas-item-${fieldId}`;
 
+/**
+ * The empty canvas's message. It is on screen exactly while the builder's Preview is disabled,
+ * so Preview points to it as the reason (D-36).
+ */
+export const CANVAS_EMPTY_ID = 'canvas-empty';
+
 export type MoveDirection = 'up' | 'down';
 
 /** A Move button's DOM ID, so focus can follow the field it moved. */
@@ -64,7 +70,7 @@ export function Canvas({
         Fields
       </h2>
       {fields.length === 0 ? (
-        <p className={styles.canvasEmpty}>
+        <p id={CANVAS_EMPTY_ID} className={styles.canvasEmpty}>
           No fields yet. Choose a field type to add the first one.
         </p>
       ) : (

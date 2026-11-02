@@ -38,6 +38,16 @@ describe('routing', () => {
     });
   });
 
+  it('lays the builder out as a workspace and other pages as documents (ADR 0021)', async () => {
+    const { user } = await renderApp('/');
+    expect(screen.getByRole('main')).toHaveAttribute('data-layout', 'document');
+
+    await user.click((await screen.findAllByRole('link', { name: 'New template' }))[0]!);
+
+    await screen.findByRole('heading', { level: 1, name: 'Untitled template' });
+    expect(screen.getByRole('main')).toHaveAttribute('data-layout', 'workspace');
+  });
+
   it('moves focus to the new page’s heading after navigating', async () => {
     const { user } = await renderApp('/');
 

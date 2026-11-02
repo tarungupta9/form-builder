@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import type { UserEvent } from '@testing-library/user-event';
 import type { FormTemplate } from '../../domain/template';
 import { QUARANTINE_PREFIX } from '../../storage/collection';
 import { STORAGE_KEYS, createRepositories } from '../../storage/repositories';
@@ -7,6 +8,7 @@ import { settleAnnouncements, startFakeClock } from '../../test/timers';
 import { draftResponse, submittedResponse, template, textField } from '../../test/fixtures';
 import { toIsoDateTime } from '../../domain/ids';
 import { expectNoAxeViolations } from '../../test/axe';
+import { cardMenuButton, chooseCardAction } from '../../test/cardMenu';
 
 describe('Templates page', () => {
   it('shows the empty state when there are no templates', async () => {
@@ -35,20 +37,58 @@ describe('Templates page', () => {
     expect(scope.getByText('Claim back what you spent on company business.')).toBeInTheDocument();
     expect(scope.getByText('2 fields')).toBeInTheDocument();
     expect(scope.getByText(/Last edited/)).toBeInTheDocument();
-    expect(
-      scope.getByRole('link', { name: /^Open in builder\s*: Expense claim$/ }),
-    ).toHaveAttribute('href', `/templates/${saved.id}/edit`);
   });
 
-  it('links each card to its responses page, even before it has any', async () => {
+  it('shows New response as the card’s only visible action, with the rest in its menu', async () => {
+    createRepositories(localStorage).templates.put(template([textField('Name')], 'Expense claim'));
+
+    const { user } = await renderApp('/');
+
+    const card = within(
+      (await screen.findByRole('heading', { name: 'Expense claim' })).closest('li')!,
+    );
+    expect(card.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'New response: Expense claim',
+    ]);
+    expect(card.getAllByRole('button')).toEqual([await cardMenuButton('Expense claim')]);
+    expect(card.queryByRole('menu')).not.toBeInTheDocument();
+
+    await user.click(await cardMenuButton('Expense claim'));
+    expect(card.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Open in builder',
+      'View responses',
+      'Delete',
+    ]);
+  });
+
+  it('links the card’s menu to the builder and to the responses page, even before it has any', async () => {
     const saved = template([textField('Name')], 'Expense claim');
     createRepositories(localStorage).templates.put(saved);
 
-    await renderApp('/');
+    const { user } = await renderApp('/');
+    await user.click(await cardMenuButton('Expense claim'));
+
+    const menu = within(screen.getByRole('menu', { name: 'More actions for Expense claim' }));
+    expect(menu.getByRole('menuitem', { name: 'Open in builder' })).toHaveAttribute(
+      'href',
+      `/templates/${saved.id}/edit`,
+    );
+    expect(menu.getByRole('menuitem', { name: 'View responses' })).toHaveAttribute(
+      'href',
+      `/templates/${saved.id}/responses`,
+    );
+  });
+
+  it('opens the builder from the card’s menu', async () => {
+    createRepositories(localStorage).templates.put(template([textField('Name')], 'Expense claim'));
+
+    const { user, router } = await renderApp('/');
+    await chooseCardAction(user, 'Expense claim', 'Open in builder');
 
     expect(
-      await screen.findByRole('link', { name: /^View responses\s*: Expense claim$/ }),
-    ).toHaveAttribute('href', `/templates/${saved.id}/responses`);
+      await screen.findByRole('heading', { level: 1, name: 'Expense claim' }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toMatch(/\/edit$/);
   });
 
   it('lists the most recently edited template first', async () => {
@@ -209,7 +249,7 @@ describe('Templates page', () => {
     createRepositories(localStorage).responses.put(submittedResponse(form));
     createRepositories(localStorage).responses.put(draftResponse(form));
     const cards = await renderApp('/');
-    await screen.findByRole('heading', { name: 'Expense claim' });
+    await cards.user.click(await cardMenuButton('Expense claim'));
     await expectNoAxeViolations(cards.container);
     cards.unmount();
 
@@ -224,8 +264,7 @@ describe('Deleting a template (D-22)', () => {
   const repositories = () => createRepositories(localStorage);
   const deleteDialog = (title: string) =>
     within(screen.getByRole('dialog', { name: `Delete ${title}?` }));
-  const deleteButton = (title: string) =>
-    screen.getByRole('button', { name: new RegExp(`^Delete\\s*: ${title}$`) });
+  const askToDelete = (user: UserEvent, title: string) => chooseCardAction(user, title, 'Delete');
 
   /** Cards are listed most recently edited first, so the hour sets the order: Travel, Office, Books. */
   function seed(responsesForTravel: number) {
@@ -255,7 +294,7 @@ describe('Deleting a template (D-22)', () => {
     seed(3);
     const { user } = await renderApp('/');
 
-    await user.click(deleteButton('Travel'));
+    await askToDelete(user, 'Travel');
 
     const dialog = deleteDialog('Travel');
     expect(
@@ -272,7 +311,7 @@ describe('Deleting a template (D-22)', () => {
     repositories().responses.put(draftResponse(books));
     const { user } = await renderApp('/');
 
-    await user.click(deleteButton('Travel'));
+    await askToDelete(user, 'Travel');
     const travelDialog = deleteDialog('Travel');
     expect(
       travelDialog.getByText(
@@ -284,7 +323,7 @@ describe('Deleting a template (D-22)', () => {
     ).toBeVisible();
     await user.click(travelDialog.getByRole('button', { name: 'Cancel' }));
 
-    await user.click(deleteButton('Books'));
+    await askToDelete(user, 'Books');
     expect(
       deleteDialog('Books').getByText(
         'Its 1 response in progress will be deleted too. This can’t be undone.',
@@ -296,24 +335,25 @@ describe('Deleting a template (D-22)', () => {
     seed(0);
     const { user } = await renderApp('/');
 
-    await user.click(deleteButton('Books'));
+    await askToDelete(user, 'Books');
 
     const dialog = deleteDialog('Books');
     expect(dialog.getByText('It has no responses. This can’t be undone.')).toBeVisible();
     expect(dialog.getByRole('button', { name: 'Delete template' })).toBeVisible();
   });
 
-  it('keeps the template after Cancel, and returns focus to Delete', async () => {
+  it('keeps the template after Cancel, and returns focus to that card’s menu button', async () => {
     seed(3);
     const { user } = await renderApp('/');
-    await user.click(deleteButton('Travel'));
+    await askToDelete(user, 'Travel');
 
     await user.click(deleteDialog('Travel').getByRole('button', { name: 'Cancel' }));
 
     expect(storedTitles()).toEqual(['Books', 'Office', 'Travel']);
     expect(storedResponseCount()).toBe(4);
+    const menuButton = await cardMenuButton('Travel');
     await waitFor(() => {
-      expect(deleteButton('Travel')).toHaveFocus();
+      expect(menuButton).toHaveFocus();
     });
   });
 
@@ -321,7 +361,7 @@ describe('Deleting a template (D-22)', () => {
     startFakeClock();
     seed(3);
     const { user } = await renderApp('/', { advanceTimers: vi.advanceTimersByTime });
-    await user.click(deleteButton('Travel'));
+    await askToDelete(user, 'Travel');
 
     await user.click(
       deleteDialog('Travel').getByRole('button', { name: 'Delete template and 3 responses' }),
@@ -340,10 +380,23 @@ describe('Deleting a template (D-22)', () => {
     vi.useRealTimers();
   });
 
+  it('confirms the deletion on screen with a toast, as well as announcing it (ADR 0022)', async () => {
+    seed(3);
+    const { user } = await renderApp('/');
+    await askToDelete(user, 'Travel');
+
+    await user.click(
+      deleteDialog('Travel').getByRole('button', { name: 'Delete template and 3 responses' }),
+    );
+
+    // The toast is aria-hidden (the live region speaks), so it is found by its test id.
+    expect(screen.getByTestId('toast')).toHaveTextContent('Deleted Travel and its 3 responses.');
+  });
+
   it('focuses the previous card’s title after deleting the last card in the list', async () => {
     seed(0);
     const { user } = await renderApp('/');
-    await user.click(deleteButton('Books'));
+    await askToDelete(user, 'Books');
 
     await user.click(deleteDialog('Books').getByRole('button', { name: 'Delete template' }));
 
@@ -356,7 +409,7 @@ describe('Deleting a template (D-22)', () => {
     const only = template([textField('Name')], 'Only');
     repositories().templates.put(only);
     const { user } = await renderApp('/');
-    await user.click(deleteButton('Only'));
+    await askToDelete(user, 'Only');
 
     await user.click(deleteDialog('Only').getByRole('button', { name: 'Delete template' }));
 
@@ -368,7 +421,7 @@ describe('Deleting a template (D-22)', () => {
   it('shows the storage error and keeps the card when the deletion cannot be written', async () => {
     seed(3);
     const { user } = await renderApp('/');
-    await user.click(deleteButton('Travel'));
+    await askToDelete(user, 'Travel');
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError');
     });

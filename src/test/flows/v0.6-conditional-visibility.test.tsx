@@ -27,6 +27,7 @@ import {
   template,
   textField,
 } from '../fixtures';
+import { chooseCardAction } from '../cardMenu';
 import { renderApp } from '../renderApp';
 import { settleAnnouncements, startFakeClock } from '../timers';
 
@@ -169,9 +170,7 @@ describe('v0.6 demo: conditional visibility', () => {
     // A full refresh keeps the conditions: the canvas tags both dependants.
     unmount();
     const { user: author } = await renderApp('/');
-    await author.click(
-      await card('Expense claim').findByRole('link', { name: /^Open in builder/ }),
-    );
+    await chooseCardAction(author, 'Expense claim', 'Open in builder');
     for (const label of [/^Nights/, /^Approval reason/]) {
       expect(await canvas().findByRole('button', { name: label })).toHaveAccessibleName(
         /Hidden at start Conditional$/,
