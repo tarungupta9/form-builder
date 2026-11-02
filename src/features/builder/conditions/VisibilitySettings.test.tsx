@@ -431,6 +431,10 @@ describe('Visibility settings', () => {
     await select(user, 'Expense type');
     await user.click(showGroup().getByRole('button', { name: 'Add a show condition' }));
     await user.click(hideGroup().getByRole('button', { name: 'Add a hide condition' }));
+    // Let the live region speak first, so its update never lands while axe is running.
+    await waitFor(() => {
+      expect(screen.getByTestId('live-region')).toHaveTextContent('Hide condition 1 added');
+    });
 
     await expectNoAxeViolations(document.body);
   });

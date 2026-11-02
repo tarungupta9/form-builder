@@ -2,7 +2,7 @@
  * The Required section of the config panel, used the way an author uses it: through the builder
  * page, finding every control by its role and accessible name.
  */
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import type { Field, FormTemplate } from '../../../domain/template';
 import { createRepositories } from '../../../storage/repositories';
@@ -230,6 +230,11 @@ describe('Required settings', () => {
     await user.click(
       unrequireGroup().getByRole('button', { name: 'Add a not-required condition' }),
     );
+
+    // Let the live region speak first, so its update never lands while axe is running.
+    await waitFor(() => {
+      expect(spoken()).toHaveTextContent('Not-required condition 1 added');
+    });
 
     await expectNoAxeViolations(document.body);
   });
