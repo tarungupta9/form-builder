@@ -1,5 +1,12 @@
 import type { ConditionId, FieldId, IsoDate, IsoDateTime, OptionId, TemplateId } from './ids';
-import type { ChoiceValue, DateValue, MultiValue, NumberValue, TextValue } from './response';
+import type {
+  ChoiceValue,
+  DateValue,
+  FilesValue,
+  MultiValue,
+  NumberValue,
+  TextValue,
+} from './response';
 
 export interface FormTemplate {
   id: TemplateId;
@@ -136,6 +143,26 @@ export interface SectionConfig {
   size: SectionSize;
 }
 
+export interface FileConfig {
+  /**
+   * Normalised when the author types them (D-17): lower-case extensions with a leading dot
+   * (".pdf") or MIME types and wildcards ("image/*"). Empty allows any file.
+   */
+  allowedTypes: string[];
+  /** Unset means no limit. */
+  maxFiles?: number;
+}
+
+export type Aggregation = 'sum' | 'average' | 'min' | 'max';
+
+export interface CalculationConfig {
+  /** Number fields only, never another calculation; in form order. */
+  sourceFieldIds: FieldId[];
+  aggregation: Aggregation;
+  /** Decimal places the result is rounded to and shown with. */
+  decimals: Decimals;
+}
+
 // ---------------------------------------------------------------------------------------------
 // The field union
 // ---------------------------------------------------------------------------------------------
@@ -158,6 +185,9 @@ export interface FieldTypeMap {
   multiSelect: { config: MultiSelectConfig; value: MultiValue; logic: InputFieldLogic };
   /** Display only: it holds no value (`never`) and has no required axis. */
   section: { config: SectionConfig; value: never; logic: FieldLogic };
+  file: { config: FileConfig; value: FilesValue; logic: InputFieldLogic };
+  /** Display only and derived (ADR 0018): its value is computed, never typed, and never required. */
+  calculation: { config: CalculationConfig; value: NumberValue; logic: FieldLogic };
 }
 
 export type FieldType = keyof FieldTypeMap;

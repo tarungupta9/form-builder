@@ -12,6 +12,8 @@ import { textDefinition } from './text/definition';
 import { textareaDefinition } from './textarea/definition';
 import { singleSelectDefinition } from './single-select/definition';
 import { multiSelectDefinition } from './multi-select/definition';
+import { fileDefinition } from './file/definition';
+import { calculationDefinition } from './calculation/definition';
 
 export const fieldRegistry: { readonly [K in FieldType]: FieldDefinition<K> } = {
   text: textDefinition,
@@ -21,6 +23,8 @@ export const fieldRegistry: { readonly [K in FieldType]: FieldDefinition<K> } = 
   singleSelect: singleSelectDefinition,
   multiSelect: multiSelectDefinition,
   section: sectionDefinition,
+  file: fileDefinition,
+  calculation: calculationDefinition,
 };
 
 /**

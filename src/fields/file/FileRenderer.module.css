@@ -1,0 +1,105 @@
+.dropzone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 2px dashed var(--color-border-dashed);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.dropzone:focus-within {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.invalid {
+  border-color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+.dropIcon {
+  color: var(--color-primary);
+}
+
+.dropText {
+  color: var(--color-text-secondary);
+}
+
+.choose {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.choose:hover {
+  background: var(--color-tint);
+}
+
+.chooseDisabled {
+  border-color: var(--color-border-control);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.refusal {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.fileIcon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.fileText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--space-3);
+}
+
+.fileName {
+  overflow-wrap: anywhere;
+  color: var(--color-answer);
+}
+
+.fileMeta {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-muted);
+}

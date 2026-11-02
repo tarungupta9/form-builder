@@ -411,6 +411,11 @@ interface FieldDefinition<K extends FieldType> {
   validateValue(field: FieldOf<K>, value: FieldValueOf<K> | undefined, required: boolean): string | null;  // first problem only
   toExport(field: FieldOf<K>, value: FieldValueOf<K> | undefined): ExportBlock;   // how it reads in the export (§5.6)
   conditionTarget(field: FieldOf<K>): ConditionTarget | null;   // how a condition reads it; null = cannot be a target
+  derivation?: {                               // only a type whose value is computed (calculation, v0.9; ADR 0018)
+    sourcesOf(field: FieldOf<K>): readonly FieldId[];              // graph edges, like condition targets
+    withoutSource(field: FieldOf<K>, sourceId: FieldId): FieldOf<K>; // the D-12 cascade
+    derive(field: FieldOf<K>, effective: ResponseValues): FieldValueOf<K> | undefined;
+  };
 }
 
 type ConditionTarget =                         // kinds are exactly the predicate kinds (§4.3)
@@ -468,8 +473,9 @@ interface FormEvaluation {
   required:  ReadonlySet<FieldId>;   // visible fields only
   effective: ResponseValues;         // hidden fields absent
 }
-// v0.9 adds calculation results and the calculation step through a plugin seam, so the
-// engine never names a field type.
+// From v0.9 both functions also take `FieldDerivations`, the registry's view of the plugins'
+// `derivation` members: sources become graph edges, and each derived field's value is computed
+// into `effective` in the same pass, so the engine never names a field type (ADR 0018).
 ```
 
 The algorithm runs in one pass, in topological order:

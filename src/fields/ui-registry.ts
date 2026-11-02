@@ -18,6 +18,10 @@ import { SingleSelectEditor } from './single-select/SingleSelectEditor';
 import { SingleSelectRenderer } from './single-select/SingleSelectRenderer';
 import { MultiSelectEditor } from './multi-select/MultiSelectEditor';
 import { MultiSelectRenderer } from './multi-select/MultiSelectRenderer';
+import { FileEditor } from './file/FileEditor';
+import { FileRenderer } from './file/FileRenderer';
+import { CalculationEditor } from './calculation/CalculationEditor';
+import { CalculationRenderer } from './calculation/CalculationRenderer';
 
 export const fieldUi: { readonly [K in FieldType]: FieldUi<K> } = {
   text: { Editor: TextEditor, Renderer: TextRenderer },
@@ -27,6 +31,8 @@ export const fieldUi: { readonly [K in FieldType]: FieldUi<K> } = {
   singleSelect: { Editor: SingleSelectEditor, Renderer: SingleSelectRenderer },
   multiSelect: { Editor: MultiSelectEditor, Renderer: MultiSelectRenderer },
   section: { Editor: SectionEditor, Renderer: SectionRenderer },
+  file: { Editor: FileEditor, Renderer: FileRenderer },
+  calculation: { Editor: CalculationEditor, Renderer: CalculationRenderer },
 };
 
 export function uiOf(field: Field): FieldUi<FieldType> {

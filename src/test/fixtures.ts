@@ -17,6 +17,8 @@ import {
 import type {
   ChoiceValue,
   DateValue,
+  FileMeta,
+  FilesValue,
   MultiValue,
   NumberValue,
   ResponseValues,
@@ -122,6 +124,35 @@ export const sectionField = (
   logic: defaultFieldLogic(),
 });
 
+export const fileField = (
+  label = 'Receipts',
+  config: Partial<FieldOf<'file'>['config']> = {},
+): FieldOf<'file'> => ({
+  id: newFieldId(),
+  type: 'file',
+  label,
+  config: { allowedTypes: [], ...config },
+  logic: defaultInputLogic(),
+});
+
+/** A calculation over `sources`, in the order given. */
+export const calculationField = (
+  label = 'Total',
+  sources: readonly FieldOf<'number'>[] = [],
+  config: Partial<FieldOf<'calculation'>['config']> = {},
+): FieldOf<'calculation'> => ({
+  id: newFieldId(),
+  type: 'calculation',
+  label,
+  config: {
+    sourceFieldIds: sources.map((source) => source.id),
+    aggregation: 'sum',
+    decimals: 2,
+    ...config,
+  },
+  logic: defaultFieldLogic(),
+});
+
 export const condition = (targetFieldId: FieldId, predicate: Predicate): Condition => ({
   id: newConditionId(),
   targetFieldId,
@@ -146,6 +177,13 @@ export const text = (value: string): TextValue => ({ kind: 'text', value });
 export const num = (input: string): NumberValue => ({ kind: 'number', input });
 export const choice = (value: OptionId | null): ChoiceValue => ({ kind: 'choice', value });
 export const multi = (...value: OptionId[]): MultiValue => ({ kind: 'multi', value });
+export const fileMeta = (name: string, size = 2_516_582, type = 'application/pdf'): FileMeta => ({
+  name,
+  size,
+  type,
+  lastModified: Date.UTC(2026, 9, 31),
+});
+export const files = (...value: FileMeta[]): FilesValue => ({ kind: 'files', value });
 export const date = (raw: string): DateValue => ({ kind: 'date', value: isoDate(raw) });
 
 export function isoDate(raw: string): IsoDate {

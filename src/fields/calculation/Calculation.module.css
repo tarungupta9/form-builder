@@ -1,0 +1,28 @@
+.calculation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-weight: 600;
+}
+
+.output {
+  align-self: flex-start;
+  min-width: 200px;
+  padding: var(--space-1) 0 6px;
+  border-bottom: 5px double var(--color-primary);
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+  font-stretch: 90%;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-answer);
+}
+
+.hint {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-muted);
+}
