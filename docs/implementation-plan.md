@@ -1,6 +1,6 @@
 # Implementation Plan — Verified Slices
 
-- **Status:** Agreed. v0.1–v0.10 signed off; v1.0 is in review (see the [tracker](#6-progress-tracker)).
+- **Status:** Complete. v0.1–v1.0 signed off (see the [tracker](#6-progress-tracker)).
 - **Date:** 2026-11-01
 - **Replaces:** the layer-by-layer delivery plan in [high-level-design.md §10](high-level-design.md#10-delivery-plan).
 
@@ -367,7 +367,7 @@ The last two pin reviewer invariants before the condition editor exists. v0.6 pi
 - `axe-core` (through `src/test/axe.ts`) on every page in its key states. A full keyboard and VoiceOver audit against [HLD §7](high-level-design.md#7-accessibility-plan-wcag-22-aa): contrast, 24×24 px targets, focus never hidden, reduced motion.
 - The README complete: run steps, storage schema, decisions, and "with more time".
 - The AI usage log with at least five well-described entries.
-- Unadopted parts-bin files deleted. **Owner action:** the parts bin is outside the repo (`../parts-bin`), so the owner decides when to delete it.
+- Unadopted parts-bin files deleted. Done: the owner deleted `../parts-bin` after v1.0; every adopted file had already been copied into `src/`.
 - Optionally, one Playwright smoke test. **Cut**; listed in the README under "With more time".
 
 **Demo script:** the full flow on a production build (`npm run build && npm run preview`), by keyboard alone, in Chrome and Safari.
@@ -392,7 +392,7 @@ Update this table at each sign-off.
 | v0.8    | Builder workflow                        | Signed off | 2026-11-02 | ADR 0016 (D-28, D8-1 to D8-3) and ADR 0017 (route code-splitting, pulled in from v1.0 by the owner). First commit makes `renderApp` async. README rows for D-21, D-22 and the cross-tab warning                                                                                                                       |
 | v0.9    | Calculation and file upload             | Signed off | 2026-11-02 | ADR 0018 (calculation seam). First commit is the seam alone, so `check:seam` against it lists only the field-type half                                                                                                                                                                                                |
 | v0.10   | Drafts and resume                       | Signed off | 2026-11-02 | ADR 0019 (D-23). Submitted responses keep the draft’s ID; their URL opens read-only via `ResponseDocument`                                                                                                                                                                                                            |
-| v1.0    | Polish and submission                   | In review  | —          | No new ADR. D-33 and the Playwright smoke test cut (README "With more time"); axe on every page in its key states; README and AI usage log completed. Deleting `../parts-bin` is the owner's call                                                                                                                     |
+| v1.0    | Polish and submission                   | Signed off | 2026-11-02 | No new ADR. D-33 and the Playwright smoke test cut (README "With more time"); axe on every page in its key states; README and AI usage log completed. Deleting `../parts-bin` is the owner's call                                                                                                                     |
 
 ---
 
