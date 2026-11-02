@@ -1,6 +1,6 @@
 # Implementation Plan — Verified Slices
 
-- **Status:** Agreed. v0.1–v0.7 signed off; v0.8 is next (see the [tracker](#6-progress-tracker)).
+- **Status:** Agreed. v0.1–v0.7 signed off; v0.8 is in review (see the [tracker](#6-progress-tracker)).
 - **Date:** 2026-11-01
 - **Replaces:** the layer-by-layer delivery plan in [high-level-design.md §10](high-level-design.md#10-delivery-plan).
 
@@ -364,7 +364,6 @@ The last two pin reviewer invariants before the condition editor exists. v0.6 pi
 **In scope**
 
 - Builder crash recovery (D-33), if time allows.
-- Code-split routes.
 - `axe-core` (through `src/test/axe.ts`) on every page in its key states. A full keyboard and VoiceOver audit against [HLD §7](high-level-design.md#7-accessibility-plan-wcag-22-aa): contrast, 24×24 px targets, focus never hidden, reduced motion.
 - The README complete: run steps, storage schema, decisions, and "with more time".
 - The AI usage log with at least five well-described entries.
@@ -390,7 +389,7 @@ Update this table at each sign-off.
 | v0.5    | Choice fields                           | Signed off  | 2026-11-01 | No ADR (tiles-as-radios stays in HLD §7). Adds the option reorder the spec requires. Built in parallel with v0.4 off `v0.3`, rebased onto v0.4; `check:seam -- v0.4` passes                                                                                                                                           |
 | v0.6    | Conditional visibility                  | Signed off  | 2026-11-02 | ADR 0014 (D-1, D-2, D-4–D-9, Q-4, D6-2, D6-13). First commit fixes the flaky suite. Contract gains `conditionTarget` (D6-1); config issues carry a control ID (D6-12)                                                                                                                                                 |
 | v0.7    | Conditional required and safe editing   | Signed off  | 2026-11-02 | ADR 0015 (D-12, option deletion, warnings channel); amends ADR 0014 (require axis, D-3 corrected, D6-2 superseded). First commit drives the flow tests' timers with a fake clock                                                                                                                                      |
-| v0.8    | Builder workflow                        | Not started | —          | Was v0.6                                                                                                                                                                                                                                                                                                              |
+| v0.8    | Builder workflow                        | In review   | —          | ADR 0016 (D-28, D8-1 to D8-3) and ADR 0017 (route code-splitting, pulled in from v1.0 by the owner). First commit makes `renderApp` async. README rows for D-21, D-22 and the cross-tab warning                                                                                                                       |
 | v0.9    | Calculation and file upload             | Not started | —          |                                                                                                                                                                                                                                                                                                                       |
 | v0.10   | Drafts and resume                       | Not started | —          |                                                                                                                                                                                                                                                                                                                       |
 | v1.0    | Polish and submission                   | Not started | —          |                                                                                                                                                                                                                                                                                                                       |

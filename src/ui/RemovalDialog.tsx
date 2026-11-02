@@ -1,7 +1,6 @@
 import type { Dependant } from '../domain/rules/references';
 import { conditionCount, describeReads } from '../domain/rules/references';
-import { Button } from './Button';
-import { Dialog } from './Dialog';
+import { ConfirmDialog } from './ConfirmDialog';
 import styles from './Dialog.module.css';
 import { displayLabel } from './FormField';
 import { plural } from './format';
@@ -15,11 +14,7 @@ interface RemovalDialogProps {
   dependants: readonly Dependant[];
   /** Names the whole consequence: "Remove field and conditions". */
   confirmLabel: string;
-  /**
-   * Where focus goes after confirming, since the button that opened the dialog is removed with
-   * the thing it removed. Worked out when the dialog opens, so this dialog is the only thing
-   * that moves focus on confirm: a second focus request would race the modal's inert page.
-   */
+  /** Where focus goes after confirming, since the opener is removed with what it removed. */
   fallbackFocusId: string;
   onCancel: () => void;
   onConfirm: () => void;
@@ -27,9 +22,8 @@ interface RemovalDialogProps {
 
 /**
  * Asks before removing something other fields' conditions refer to, and names each of those
- * fields, so nothing the author wrote disappears without being listed first (D-12). Cancel
- * comes first and takes focus when the dialog opens, because the other button destroys work;
- * Escape cancels too, and either way focus returns to the button that opened it.
+ * fields, so nothing the author wrote disappears without being listed first (D-12). The
+ * shell, with Cancel first and focus handling, is `ConfirmDialog`.
  */
 export function RemovalDialog({
   open,
@@ -42,25 +36,24 @@ export function RemovalDialog({
   onConfirm,
 }: RemovalDialogProps) {
   return (
-    <Dialog open={open} title={title} onClose={onCancel} fallbackFocusId={fallbackFocusId}>
-      <div className={styles.body}>
-        <p>{lead}</p>
-        <ul className={styles.list}>
-          {dependants.map(({ field, reads }) => (
-            <li key={field.id}>
-              {displayLabel(field.label)}: {describeReads(reads)}
-            </li>
-          ))}
-        </ul>
-        <p>Their other conditions stay.</p>
-      </div>
-      <div className={styles.actions}>
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button variant="danger" onClick={onConfirm}>
-          {confirmLabel}
-        </Button>
-      </div>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      title={title}
+      confirmLabel={confirmLabel}
+      fallbackFocusId={fallbackFocusId}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    >
+      <p>{lead}</p>
+      <ul className={styles.list}>
+        {dependants.map(({ field, reads }) => (
+          <li key={field.id}>
+            {displayLabel(field.label)}: {describeReads(reads)}
+          </li>
+        ))}
+      </ul>
+      <p>Their other conditions stay.</p>
+    </ConfirmDialog>
   );
 }
 

@@ -10,7 +10,7 @@ import { FailureAlert } from '../../ui/ErrorSummary';
 import { plural } from '../../ui/format';
 import { PageHeader } from '../../ui/PageHeader';
 import { PRINT_FAILURE, usePdfDownload } from '../export/usePdfDownload';
-import { NO_FIELDS_REASON } from '../fill/notices';
+import { NO_FIELDS_REASON } from '../fill/noFieldsReason';
 import { SetAsideNotice } from '../storage-error/SetAsideNotice';
 import { StorageErrorPanel } from '../storage-error/StorageErrorPanel';
 import { ResponseRow } from './ResponseRow';

@@ -1,7 +1,28 @@
-import { screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { createMemoryRouter } from 'react-router';
+import { createRepositories } from '../storage/repositories';
+import { template, textField } from '../test/fixtures';
 import { renderApp } from '../test/renderApp';
+import { App } from './App';
+import { routes } from './routes';
 
 describe('routing', () => {
+  // First in the file: each lazy page loads once per test file, and only its first render waits.
+  it('shows a loading status while a page’s code loads, then the page', async () => {
+    const form = template([textField('Name')], 'Travel');
+    const repositories = createRepositories(localStorage);
+    repositories.templates.put(form);
+    const router = createMemoryRouter(routes, {
+      initialEntries: [`/templates/${form.id}/responses`],
+    });
+
+    render(<App repositories={repositories} router={router} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading the page…');
+    expect(await screen.findByRole('heading', { level: 1, name: /Travel/ })).toBeInTheDocument();
+    expect(screen.queryByText('Loading the page…')).not.toBeInTheDocument();
+  });
+
   it('shows Not found for an unknown URL, with a way back', async () => {
     await renderApp('/nowhere');
 

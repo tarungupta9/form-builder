@@ -13,7 +13,7 @@ import {
   textField,
 } from '../../test/fixtures';
 import { expectNoAxeViolations } from '../../test/axe';
-import { settleAnnouncements, startFakeClock } from '../../test/timers';
+import { FLOW_TIMEOUT_MS, settleAnnouncements, startFakeClock } from '../../test/timers';
 
 const canvas = () => within(screen.getByRole('list', { name: 'Fields' }));
 const detailsDialog = () => screen.getByRole('dialog', { name: 'Title and description' });
@@ -30,36 +30,41 @@ async function setDetails(user: UserEvent, title: string, description = '') {
 }
 
 describe('Builder', () => {
-  it('creates a template, saves it, and lists it after a reload', async () => {
-    const first = await renderApp('/templates/new');
-    const { user, router } = first;
+  // End to end through three pages, so it gets the flow tests' budget.
+  it(
+    'creates a template, saves it, and lists it after a reload',
+    { timeout: FLOW_TIMEOUT_MS },
+    async () => {
+      const first = await renderApp('/templates/new');
+      const { user, router } = first;
 
-    await setDetails(user, 'Expense claim', 'For staff expenses');
-    await user.click(screen.getByRole('button', { name: 'Add Short text' }));
-    await user.type(screen.getByRole('textbox', { name: 'Label' }), 'Employee name');
-    await user.click(screen.getByRole('switch', { name: 'Required' }));
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+      await setDetails(user, 'Expense claim', 'For staff expenses');
+      await user.click(screen.getByRole('button', { name: 'Add Short text' }));
+      await user.type(screen.getByRole('textbox', { name: 'Label' }), 'Employee name');
+      await user.click(screen.getByRole('switch', { name: 'Required' }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(/^\/templates\/[0-9a-f-]+\/edit$/);
-    });
-    // Replacing the URL is not a new page: the builder stays mounted and focus stays on Save.
-    expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus();
-    expect(screen.getByRole('heading', { level: 1, name: 'Expense claim' })).toBeInTheDocument();
+      await waitFor(() => {
+        expect(router.state.location.pathname).toMatch(/^\/templates\/[0-9a-f-]+\/edit$/);
+      });
+      // Replacing the URL is not a new page: the builder stays mounted and focus stays on Save.
+      expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus();
+      expect(screen.getByRole('heading', { level: 1, name: 'Expense claim' })).toBeInTheDocument();
 
-    // A full refresh: nothing in memory survives, only what was written to localStorage.
-    first.unmount();
-    const second = await renderApp('/');
-    const card = (await screen.findByRole('heading', { name: 'Expense claim' })).closest('li')!;
-    expect(within(card).getByText('For staff expenses')).toBeInTheDocument();
-    expect(within(card).getByText('1 field')).toBeInTheDocument();
+      // A full refresh: nothing in memory survives, only what was written to localStorage.
+      first.unmount();
+      const second = await renderApp('/');
+      const card = (await screen.findByRole('heading', { name: 'Expense claim' })).closest('li')!;
+      expect(within(card).getByText('For staff expenses')).toBeInTheDocument();
+      expect(within(card).getByText('1 field')).toBeInTheDocument();
 
-    await second.user.click(
-      within(card).getByRole('link', { name: /^Open in builder\s*: Expense claim$/ }),
-    );
-    expect(await canvas().findByText('Employee name')).toBeInTheDocument();
-    expect(canvas().getByText('Required')).toBeInTheDocument();
-  });
+      await second.user.click(
+        within(card).getByRole('link', { name: /^Open in builder\s*: Expense claim$/ }),
+      );
+      expect(await canvas().findByText('Employee name')).toBeInTheDocument();
+      expect(canvas().getByText('Required')).toBeInTheDocument();
+    },
+  );
 
   it('adds a field after the selected one, selects it, focuses it and announces it', async () => {
     const { user } = await renderApp('/templates/new');

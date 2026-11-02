@@ -26,3 +26,5 @@ Architecture decision records, in the order they were made. The template is [`de
 | [0013](decisions/0013-number-as-a-text-input.md)                 | Take Number answers in a text input, not `type="number"`                                  | Accepted                                           |
 | [0014](decisions/0014-conditional-logic-semantics.md)            | Combine conditions per effect, fail closed on conflicts, and refuse loops while authoring | Accepted (D6-2 superseded by 0015)                 |
 | [0015](decisions/0015-confirm-and-cascade-deleted-references.md) | Confirm and cascade deleted references; warnings never block Save                         | Accepted                                           |
+| [0016](decisions/0016-drag-and-drop-reordering.md)               | Reorder with dnd-kit through a drag handle, and keep Move up / Move down                  | Accepted                                           |
+| [0017](decisions/0017-route-code-splitting.md)                   | Split the code by route with `React.lazy`, and load the print view on export              | Accepted                                           |

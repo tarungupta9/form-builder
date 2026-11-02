@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from 'react';
 import type { ResponseId } from '../../domain/ids';
 import type { SubmittedResponse } from '../../domain/response';
 import { toExportModel } from './exportModel';
-import { printDocument } from './printDocument';
 
 /** Shown when the browser will not open its print dialog. A cancelled dialog is not a failure. */
 export const PRINT_FAILURE = {
@@ -14,6 +13,9 @@ export const PRINT_FAILURE = {
  * Downloads responses as PDFs, one at a time. While one is being prepared, `busyId` names it
  * and further presses are ignored, so a double click never opens two dialogs. Nothing claims
  * success afterwards: a saved PDF and a cancelled dialog look the same to the page.
+ *
+ * The print view loads on the first export, not with the page (ADR 0017). If it cannot load,
+ * that is the same failure as a print dialog that will not open.
  */
 export function usePdfDownload() {
   const [busyId, setBusyId] = useState<ResponseId | null>(null);
@@ -27,6 +29,7 @@ export function usePdfDownload() {
     setBusyId(response.id);
     setFailed(false);
     try {
+      const { printDocument } = await import('./printDocument');
       await printDocument(toExportModel(response));
     } catch {
       setFailed(true);

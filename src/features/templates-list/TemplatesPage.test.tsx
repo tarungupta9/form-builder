@@ -1,7 +1,9 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import type { FormTemplate } from '../../domain/template';
 import { QUARANTINE_PREFIX } from '../../storage/collection';
 import { STORAGE_KEYS, createRepositories } from '../../storage/repositories';
 import { renderApp } from '../../test/renderApp';
+import { settleAnnouncements, startFakeClock } from '../../test/timers';
 import { submittedResponse, template, textField } from '../../test/fixtures';
 import { toIsoDateTime } from '../../domain/ids';
 
@@ -172,5 +174,141 @@ describe('Templates page', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start again with no responses' })).toBeVisible();
     expect(localStorage.getItem(STORAGE_KEYS.responses)).toBe('{bad');
+  });
+});
+
+describe('Deleting a template (D-22)', () => {
+  const repositories = () => createRepositories(localStorage);
+  const deleteDialog = (title: string) =>
+    within(screen.getByRole('dialog', { name: `Delete ${title}?` }));
+  const deleteButton = (title: string) =>
+    screen.getByRole('button', { name: new RegExp(`^Delete\\s*: ${title}$`) });
+
+  /** Cards are listed most recently edited first, so the hour sets the order: Travel, Office, Books. */
+  function seed(responsesForTravel: number) {
+    const at = (hour: number) => toIsoDateTime(new Date(`2026-11-01T${hour}:00:00Z`));
+    const make = (title: string, hour: number): FormTemplate => ({
+      ...template([textField('Name')], title),
+      updatedAt: at(hour),
+    });
+    const [travel, office, books] = [make('Travel', 12), make('Office', 11), make('Books', 10)];
+    [travel, office, books].forEach((form) => repositories().templates.put(form));
+    for (let i = 0; i < responsesForTravel; i += 1)
+      repositories().responses.put(submittedResponse(travel));
+    repositories().responses.put(submittedResponse(office));
+    return { travel, office, books };
+  }
+
+  const storedTitles = () => {
+    const snapshot = repositories().templates.snapshot();
+    return snapshot.ok ? [...snapshot.value.values()].map((form) => form.title).sort() : null;
+  };
+  const storedResponseCount = () => {
+    const snapshot = repositories().responses.snapshot();
+    return snapshot.ok ? snapshot.value.size : null;
+  };
+
+  it('asks first, stating how many responses go with it', async () => {
+    seed(3);
+    const { user } = await renderApp('/');
+
+    await user.click(deleteButton('Travel'));
+
+    const dialog = deleteDialog('Travel');
+    expect(
+      dialog.getByText('Its 3 responses will be deleted too. This can’t be undone.'),
+    ).toBeVisible();
+    expect(dialog.getByRole('button', { name: 'Delete template and 3 responses' })).toBeVisible();
+    expect(dialog.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  });
+
+  it('says so when a template has no responses', async () => {
+    seed(0);
+    const { user } = await renderApp('/');
+
+    await user.click(deleteButton('Books'));
+
+    const dialog = deleteDialog('Books');
+    expect(dialog.getByText('It has no responses. This can’t be undone.')).toBeVisible();
+    expect(dialog.getByRole('button', { name: 'Delete template' })).toBeVisible();
+  });
+
+  it('keeps the template after Cancel, and returns focus to Delete', async () => {
+    seed(3);
+    const { user } = await renderApp('/');
+    await user.click(deleteButton('Travel'));
+
+    await user.click(deleteDialog('Travel').getByRole('button', { name: 'Cancel' }));
+
+    expect(storedTitles()).toEqual(['Books', 'Office', 'Travel']);
+    expect(storedResponseCount()).toBe(4);
+    await waitFor(() => {
+      expect(deleteButton('Travel')).toHaveFocus();
+    });
+  });
+
+  it('removes the card and its responses, announces it, and focuses the next card’s title', async () => {
+    startFakeClock();
+    seed(3);
+    const { user } = await renderApp('/', { advanceTimers: vi.advanceTimersByTime });
+    await user.click(deleteButton('Travel'));
+
+    await user.click(
+      deleteDialog('Travel').getByRole('button', { name: 'Delete template and 3 responses' }),
+    );
+
+    expect(screen.queryByRole('heading', { name: 'Travel' })).not.toBeInTheDocument();
+    expect(storedTitles()).toEqual(['Books', 'Office']);
+    expect(storedResponseCount()).toBe(1);
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Office' })).toHaveFocus();
+    });
+    await settleAnnouncements();
+    expect(screen.getByTestId('live-region')).toHaveTextContent(
+      'Deleted Travel and its 3 responses.',
+    );
+    vi.useRealTimers();
+  });
+
+  it('focuses the previous card’s title after deleting the last card in the list', async () => {
+    seed(0);
+    const { user } = await renderApp('/');
+    await user.click(deleteButton('Books'));
+
+    await user.click(deleteDialog('Books').getByRole('button', { name: 'Delete template' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Office' })).toHaveFocus();
+    });
+  });
+
+  it('focuses "Create your first template" after deleting the only template', async () => {
+    const only = template([textField('Name')], 'Only');
+    repositories().templates.put(only);
+    const { user } = await renderApp('/');
+    await user.click(deleteButton('Only'));
+
+    await user.click(deleteDialog('Only').getByRole('button', { name: 'Delete template' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create your first template' })).toHaveFocus();
+    });
+  });
+
+  it('shows the storage error and keeps the card when the deletion cannot be written', async () => {
+    seed(3);
+    const { user } = await renderApp('/');
+    await user.click(deleteButton('Travel'));
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError');
+    });
+
+    await user.click(
+      deleteDialog('Travel').getByRole('button', { name: 'Delete template and 3 responses' }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/storage is full/i);
+    expect(screen.getByRole('heading', { name: 'Travel' })).toBeInTheDocument();
+    expect(screen.getByTestId('live-region')).not.toHaveTextContent('Deleted');
   });
 });

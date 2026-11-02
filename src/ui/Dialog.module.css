@@ -9,6 +9,11 @@
   box-shadow: var(--shadow-dialog);
 }
 
+/* Room for a whole form; it scrolls inside the dialog when taller than the screen. */
+.wide {
+  width: min(760px, calc(100vw - 2 * var(--space-4)));
+}
+
 .dialog::backdrop {
   background: rgb(26 36 32 / 45%);
 }
@@ -19,7 +24,7 @@
   line-height: 28px;
 }
 
-/* A removal dialog: what goes with it, then Cancel before the destructive action. */
+/* A confirmation: the consequence, then the safe choice before the destructive one. */
 .body {
   display: flex;
   flex-direction: column;

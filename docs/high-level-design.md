@@ -106,7 +106,7 @@ The spec asks us to decide the ambiguous 10–20% ourselves and to document the 
 | Routing | React Router (data router, `HashRouter`-style so it runs on any static host) | Hand-rolled view state, which breaks refresh and deep links | [0002](decisions/0002-hash-router.md) (D-25) |
 | State | `useReducer` for the builder, a pure engine + `useMemo` for fill, `useSyncExternalStore` over the storage repositories | Zustand or Redux, whose global stores this app does not need | [0003](decisions/0003-state-reducer-and-external-store.md) (D-26) |
 | Boundary validation | `zod` schemas for everything read from `localStorage` | Hand-written type guards, which are verbose and drift from the types | [0004](decisions/0004-zod-at-the-storage-boundary.md) (D-27) |
-| Drag and drop | `@dnd-kit/sortable`, which has a keyboard sensor and screen-reader announcements, **plus** move up/down buttons | Native HTML5 DnD, which is not keyboard accessible | D-28, ADR in v0.8 |
+| Drag and drop | `@dnd-kit/sortable`, which has a keyboard sensor and screen-reader announcements, **plus** move up/down buttons | Native HTML5 DnD, which is not keyboard accessible | D-28, [ADR 0016](decisions/0016-drag-and-drop-reordering.md) |
 | Styling | CSS Modules + design tokens as CSS custom properties | Tailwind, which gets noisy in JSX the reviewer has to read | [0005](decisions/0005-css-modules-and-tokens.md) (D-29) |
 | PDF | Print-optimised document in a hidden iframe → `print()` **(Q-2, resolved)** | A hand-written PDF byte generator | [0011](decisions/0011-pdf-through-the-print-dialog.md) (D-30) |
 | Testing | Vitest + Testing Library + user-event, with `axe-core` run directly (`axe.run`; colour contrast is checked by hand, since jsdom does no layout). One Playwright smoke test (optional). | Jest, which is slower and needs extra config under Vite | [0006](decisions/0006-vitest-and-testing-library.md) (D-31) |
@@ -387,7 +387,7 @@ formBuilder:v1:recovery    →  { schemaVersion: 1, items: Record<TemplateId | '
 | A `schemaVersion` envelope | `migrations.ts` upgrades old shapes on read. Without the version there is no safe way to evolve the shape. |
 | zod parse on each cache fill | Data in storage is untrusted (user edits, old versions, other tabs). It is parsed when the cache is filled (first read, and after any write or `storage` event), not on every access, **item by item**. An item that fails is set aside on its own: the key's stored value is first copied to `formBuilder:quarantine:<key>:<ISO timestamp>`, then the key is rewritten with the valid items, which load, and the screen says how many items were set aside and names the backup key ([ADR 0012](decisions/0012-set-aside-unreadable-items.md)). If the backup cannot be made, or the key cannot be read at all, the whole collection reports an error and refuses writes until the user chooses to start again (ADR 0007). We **never silently wipe** user data. |
 | `QuotaExceededError` handling | Writes return a result type. The UI shows "Storage is full" and keeps the in-memory state so no work is lost. |
-| Cross-tab | A `storage` event invalidates the in-memory cache, so every screen shows the other tab's change. Fill mode keeps the template as it was when the form opened (ADR 0010). From v0.8 the builder compares `updatedAt` on save and warns if another tab saved in the meantime (last write wins, but never silently). |
+| Cross-tab | A `storage` event invalidates the in-memory cache, so every screen shows the other tab's change. Fill mode keeps the template as it was when the form opened (ADR 0010), and so does the builder (v0.8). On Save the builder compares the stored `updatedAt` with the one it last saw: if another tab saved in between, the author chooses _Cancel_, _Use their version_ or _Replace with my version_; if another tab deleted the template, the builder keeps the edits open and offers _Save again_. Last write wins, but never silently. |
 
 ---
 
@@ -436,15 +436,16 @@ The builder state is a pure reducer, so every editing rule can be unit-tested wi
 ```ts
 type BuilderAction =
   | { type: 'details/changed'; title: string; description: string }   // the details dialog applies both at once (ADR 0009)
-  | { type: 'field/added'; field: Field }          // created by the caller, inserted after the selection
+  | { type: 'field/added'; field: Field; at?: number }   // created by the caller; at `at` (a palette drop), else after the selection
   | { type: 'field/updated'; field: Field }        // also removes conditions on options it no longer has (D-12)
   | { type: 'field/removed'; fieldId: FieldId }    // also removes every condition that reads the field (D-12)
   | { type: 'field/selected'; fieldId: FieldId | null }
-  | { type: 'template/saved'; template: FormTemplate };
-// From v0.8: { type: 'field/moved'; fieldId: FieldId; toIndex: number }
+  | { type: 'field/moved'; fieldId: FieldId; toIndex: number }   // drag and the Move buttons alike (ADR 0016); keeps the selection
+  | { type: 'template/saved'; template: FormTemplate };          // this tab's save, or the version another tab saved
 
-interface BuilderState { template: FormTemplate; selectedFieldId: FieldId | null }
-// From v0.8 the state also keeps the last saved template, so isDirty can be derived.
+interface BuilderState { template: FormTemplate; saved: FormTemplate; selectedFieldId: FieldId | null }
+// `saved` is the template as last saved or opened. hasUnsavedChanges(state) compares title, description
+// and fields by content (D-21), so a field moved back is not a change.
 // Derived, not stored: configIssues (the only thing that blocks Save); from v0.6, allowedTargets(fieldId);
 // from v0.7, conditionWarnings(field) (D-2, D-3: shown and announced, never blocks Save) and
 // dependantsOf(fields, fieldId), which the removal dialog lists before the cascade.
@@ -526,7 +527,16 @@ interface SetAside { count: number; backupKey: string }
 interface Repositories { templates: Collection<TemplateId, FormTemplate>; responses: Collection<ResponseId, FormResponse> }
 ```
 
-One generic collection replaces the per-entity repositories this section first proposed. Screens derive what they show (the sorted template list, response counts per template) with `useMemo` over `useCollection(collection)`, so storage knows nothing about screens. Deleting a template together with its responses (D-22) arrives in v0.8.
+One generic collection replaces the per-entity repositories this section first proposed. Screens derive what they show (the sorted template list, response counts per template) with `useMemo` over `useCollection(collection)`, so storage knows nothing about screens.
+
+Deleting a template together with its responses (D-22) is a storage rule, `storage/deleteTemplate.ts`, so no screen can forget the cascade:
+
+```ts
+responsesOf(responses, templateId): { ids: ResponseId[]; submitted: number; inProgress: number }
+deleteTemplate(repositories, templateId): Result<void, StorageError>   // responses first, then the template
+```
+
+The two keys cannot be written in one step. Removing responses first means a failure leaves a template with no responses, which can be deleted again, never responses nothing links to. Responses are matched by template ID at deletion time, whatever their status, and `remove` refuses to write over unreadable data.
 
 ### 5.6 Export
 
@@ -579,7 +589,7 @@ Export layout: a header with the form title, the description when set, "Submitte
 
 | Area | Approach |
 | --- | --- |
-| Reordering | dnd-kit keyboard sensor (Space to lift, arrows to move, Space to drop) with spoken announcements, **plus** Move up/down buttons on every canvas item. The buttons satisfy **2.5.7 Dragging Movements**, which requires a single-pointer alternative to dragging. |
+| Reordering | dnd-kit keyboard sensor (Space to lift, arrows to move, Space to drop) with spoken announcements, **plus** Move up/down buttons on every canvas item. The buttons satisfy **2.5.7 Dragging Movements**, which requires a single-pointer alternative to dragging. The drag starts only from a separate _Reorder_ handle, and dnd-kit's own live region speaks the drag while the app's region speaks the buttons, so nothing is spoken twice ([ADR 0016](decisions/0016-drag-and-drop-reordering.md)). |
 | Palette | Real `<button>`s: click or Enter adds the field after the current selection. Focus moves to the new field, and "Short text added at position 4" is announced. |
 | Canvas selection | Each item is a button with `aria-pressed`. The config panel is a labelled `<section>`, and focus can move into it. |
 | Form semantics | Every control is wrapped by `FormField`, which wires up `<label>`, hint and error through `aria-describedby`, plus `aria-invalid`. Radio, tile and multi-select groups use `<fieldset>`/`<legend>`. Tiles are native radios styled as cards, so behaviour and accessibility match the radio and dropdown displays exactly. Dropdown is a native `<select>`. Date is a native `<input type="date">`. |
@@ -603,7 +613,7 @@ The goal is correctness first. Each of these is cheap and has a measurable reaso
 | Re-renders while typing | A shared `FillField` wrapper is `React.memo`'d and receives the field, its raw answer, `required`, `error` and the stable `setValue`; it binds the field ID and calls the plugin's `readValue` inside, so no plugin renderer needs memoising. A keystroke re-renders the edited field and any field whose state changed, not the whole form. |
 | Storage reads | Repositories keep a parsed in-memory cache. `useSyncExternalStore` snapshots are referentially stable. The cache is invalidated on write and on the `storage` event, and nothing calls `JSON.parse` during render. |
 | Storage writes | Draft autosave starts on first input, is debounced (about 400 ms) and is flushed on `pagehide` and `visibilitychange`. Templates are saved only on an explicit _Save_; the builder's recovery copy (D-33) uses the same debounce and flush. |
-| Bundle | Routes are code-split with `React.lazy`, so dnd-kit loads only in the builder and the print view only on export. The dependency budget is kept small: react-router, zod, dnd-kit. |
+| Bundle | Routes are code-split with `React.lazy` (from v0.8, [ADR 0017](decisions/0017-route-code-splitting.md)): the home page loads with the app, and dnd-kit loads only in the builder and the print view only on export. The dependency budget is kept small: react-router, zod, dnd-kit. |
 | Builder canvas | The config panel only renders the selected field's editor, and canvas items render compact summaries rather than full field previews. |
 | Not doing | List virtualisation (forms will have well under 200 fields), web workers, or IndexedDB. These are noted as the scaling path in the README. |
 

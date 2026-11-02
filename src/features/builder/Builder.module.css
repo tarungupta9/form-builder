@@ -80,6 +80,22 @@
   background: var(--color-tint);
 }
 
+/* Follows the pointer while a palette button is dragged onto the canvas. */
+.paletteChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-dialog);
+  cursor: grabbing;
+}
+
 /* Canvas */
 
 .canvasEmpty {
@@ -101,6 +117,39 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* The item being dragged stays in its place, faded, while the others make room around it. */
+.dragging {
+  position: relative;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+/* 32 x 40 px: above the 24 px minimum target of WCAG 2.5.8. */
+.dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragHandle:hover {
+  background: var(--color-tint-strong);
+  color: var(--color-primary);
+}
+
+.dragging .dragHandle {
+  cursor: grabbing;
 }
 
 .canvasSelect {
@@ -182,4 +231,25 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+}
+
+/* Preview */
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.previewIntro {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-tint);
+  color: var(--color-text-secondary);
+}
+
+.previewNotice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }

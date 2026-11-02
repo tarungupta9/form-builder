@@ -1,22 +1,69 @@
+import { useState } from 'react';
 import { usePageTitle } from '../../app/usePageTitle';
+import type { FormTemplate } from '../../domain/template';
 import { useRepositories, useSetAside } from '../../storage/StorageContext';
+import { deleteTemplate, responsesOf } from '../../storage/deleteTemplate';
+import type { StorageError } from '../../storage/result';
+import { describeStorageError } from '../../storage/storageMessages';
 import { ButtonLink } from '../../ui/Button';
+import { FailureAlert } from '../../ui/ErrorSummary';
+import { useAnnounce } from '../../ui/LiveRegion';
 import { PageHeader } from '../../ui/PageHeader';
+import { plural } from '../../ui/format';
 import { SetAsideNotice } from '../storage-error/SetAsideNotice';
 import { StorageErrorPanel } from '../storage-error/StorageErrorPanel';
-import { TemplateCard } from './TemplateCard';
+import { DeleteTemplateDialog, type PendingDeletion } from './DeleteTemplateDialog';
+import { TemplateCard, cardTitleId } from './TemplateCard';
 import styles from './TemplatesPage.module.css';
 import { useResponseCounts } from './useResponseCounts';
 import { useTemplates } from './useTemplates';
 
-/** Home: every template, or a way to make the first one. */
+const EMPTY_TITLE_ID = 'empty-title';
+
+/** Home: every template, or a way to make the first one. Templates are deleted from here (D-22). */
 export function TemplatesPage() {
   usePageTitle('Templates');
-  const { templates: repository, responses: responseRepository } = useRepositories();
+  const repositories = useRepositories();
+  const { templates: repository, responses: responseRepository } = repositories;
   const templates = useTemplates();
   const responseCounts = useResponseCounts();
   const templatesSetAside = useSetAside(repository);
   const responsesSetAside = useSetAside(responseRepository);
+  const announce = useAnnounce();
+  const [deletion, setDeletion] = useState<PendingDeletion | null>(null);
+  const [deleteError, setDeleteError] = useState<StorageError | null>(null);
+
+  const askToDelete = (template: FormTemplate, listed: readonly FormTemplate[]) => {
+    setDeleteError(null);
+    const index = listed.indexOf(template);
+    const neighbour = listed[index + 1] ?? listed[index - 1];
+    const responses = responseRepository.snapshot();
+    setDeletion({
+      template,
+      responseCount: responses.ok ? responsesOf(responses.value, template.id).submitted : 0,
+      focusAfter: neighbour ? cardTitleId(neighbour) : EMPTY_TITLE_ID,
+      open: true,
+    });
+  };
+
+  const closeDeletion = () => {
+    setDeletion((pending) => pending && { ...pending, open: false });
+  };
+
+  /** The dialog moves focus as it closes, to the neighbour or back to Delete; nothing else does. */
+  const confirmDeletion = ({ template, responseCount }: PendingDeletion) => {
+    const deleted = deleteTemplate(repositories, template.id);
+    closeDeletion();
+    if (!deleted.ok) {
+      setDeleteError(deleted.error);
+      return;
+    }
+    announce(
+      responseCount > 0
+        ? `Deleted ${template.title} and its ${plural(responseCount, 'response')}.`
+        : `Deleted ${template.title}.`,
+    );
+  };
 
   if (!templates.ok) {
     return (
@@ -51,9 +98,10 @@ export function TemplatesPage() {
       <PageHeader title="Templates" actions={templates.value.length > 0 && newTemplate} />
       <SetAsideNotice setAside={templatesSetAside} noun="template" />
       <SetAsideNotice setAside={responsesSetAside} noun="response" />
+      {deleteError && <FailureAlert {...describeStorageError(deleteError)} />}
       {templates.value.length === 0 ? (
-        <section className={styles.empty} aria-labelledby="empty-title">
-          <h2 id="empty-title" className={styles.emptyTitle}>
+        <section className={styles.empty} aria-labelledby={EMPTY_TITLE_ID}>
+          <h2 id={EMPTY_TITLE_ID} tabIndex={-1} className={styles.emptyTitle}>
             Create your first template
           </h2>
           <p>A template is a form you design once and fill in as many times as you need.</p>
@@ -66,10 +114,18 @@ export function TemplatesPage() {
               key={template.id}
               template={template}
               responseCount={responseCounts.value.get(template.id) ?? 0}
+              onDelete={(chosen) => {
+                askToDelete(chosen, templates.value);
+              }}
             />
           ))}
         </ul>
       )}
+      <DeleteTemplateDialog
+        deletion={deletion}
+        onCancel={closeDeletion}
+        onConfirm={confirmDeletion}
+      />
     </>
   );
 }

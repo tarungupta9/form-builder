@@ -6,9 +6,7 @@ import { FailureAlert } from '../../ui/ErrorSummary';
 import { formatDateTime } from '../../ui/format';
 import { PRINT_FAILURE, usePdfDownload } from '../export/usePdfDownload';
 import styles from './Fill.module.css';
-
-/** Why a template cannot be filled in yet (D-20). The card shows the same reason. */
-export const NO_FIELDS_REASON = 'Add a field in the builder to collect responses.';
+import { NO_FIELDS_REASON } from './noFieldsReason';
 
 export function NoFieldsNotice({ templateId }: { templateId: TemplateId }) {
   return (

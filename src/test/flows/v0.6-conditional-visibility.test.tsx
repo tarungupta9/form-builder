@@ -28,7 +28,7 @@ import {
   textField,
 } from '../fixtures';
 import { renderApp } from '../renderApp';
-import { settleAnnouncements, startFakeClock } from '../timers';
+import { FLOW_TIMEOUT_MS, settleAnnouncements, startFakeClock } from '../timers';
 
 vi.mock('../../features/export/printDocument', () => ({ printDocument: vi.fn() }));
 const print = vi.mocked(printDocument);
@@ -107,7 +107,7 @@ async function startHidden(user: UserEvent) {
   await user.click(opens.getByRole('radio', { name: 'Hidden' }));
 }
 
-describe('v0.6 demo: conditional visibility', () => {
+describe('v0.6 demo: conditional visibility', { timeout: FLOW_TIMEOUT_MS }, () => {
   beforeEach(() => {
     print.mockResolvedValue();
   });

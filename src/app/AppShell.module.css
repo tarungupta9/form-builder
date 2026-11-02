@@ -51,3 +51,19 @@
     padding: var(--space-6) var(--space-4) var(--space-10);
   }
 }
+
+/* Hidden for the first 300 ms of a load, then faded in; screen readers get it straight away. */
+.loading {
+  color: var(--color-text-muted);
+  animation: loading-appears 200ms ease-in 300ms both;
+}
+
+@keyframes loading-appears {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

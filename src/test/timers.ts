@@ -23,3 +23,10 @@ export function startFakeClock(): void {
 export async function settleAnnouncements(): Promise<void> {
   await act(() => vi.advanceTimersByTimeAsync(SETTLE_MS + ANNOUNCE_BATCH_MS));
 }
+
+/**
+ * The per-test budget for the flow tests in `test/flows/`. Each one drives a whole demo script
+ * through the real app, typing hundreds of keystrokes, so on a busy machine it can outlast
+ * Vitest's 5 s default meant for unit tests. A real hang still fails, just later.
+ */
+export const FLOW_TIMEOUT_MS = 15_000;

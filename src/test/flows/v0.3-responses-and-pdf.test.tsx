@@ -13,6 +13,7 @@ import { createRepositories } from '../../storage/repositories';
 import { formatDateTime } from '../../ui/format';
 import { template, textField } from '../fixtures';
 import { renderApp } from '../renderApp';
+import { FLOW_TIMEOUT_MS } from '../timers';
 
 vi.mock('../../features/export/printDocument', () => ({ printDocument: vi.fn() }));
 const print = vi.mocked(printDocument);
@@ -23,7 +24,7 @@ const card = (title: string) =>
 /** The document most recently handed to the print dialog. */
 const printed = (): ExportDocument => print.mock.lastCall![0];
 
-describe('v0.3 demo: responses and PDF', () => {
+describe('v0.3 demo: responses and PDF', { timeout: FLOW_TIMEOUT_MS }, () => {
   beforeEach(() => {
     // Only `Date` is faked, so user-event and React's own timers still run.
     vi.useFakeTimers({ toFake: ['Date'] });

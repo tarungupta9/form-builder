@@ -1,16 +1,20 @@
 import { type FormTemplate, acceptsResponses } from '../../domain/template';
 import { Button, ButtonLink } from '../../ui/Button';
 import { formatDateTime, plural } from '../../ui/format';
-import { NO_FIELDS_REASON } from '../fill/notices';
+import { NO_FIELDS_REASON } from '../fill/noFieldsReason';
 import styles from './TemplatesPage.module.css';
+
+/** The card's title, which takes focus when a neighbouring card is deleted. */
+export const cardTitleId = (template: FormTemplate): string => `template-title-${template.id}`;
 
 interface TemplateCardProps {
   template: FormTemplate;
   responseCount: number;
+  onDelete: (template: FormTemplate) => void;
 }
 
 /** One template on the home page. Presentational: everything it shows comes from its props. */
-export function TemplateCard({ template, responseCount }: TemplateCardProps) {
+export function TemplateCard({ template, responseCount, onDelete }: TemplateCardProps) {
   // The title tells the cards' buttons apart; the visible words lead the name (WCAG 2.5.3).
   const forTitle = <span className="visually-hidden">: {template.title}</span>;
   const reasonId = `no-fields-${template.id}`;
@@ -18,7 +22,9 @@ export function TemplateCard({ template, responseCount }: TemplateCardProps) {
 
   return (
     <li className={styles.card}>
-      <h2 className={styles.cardTitle}>{template.title}</h2>
+      <h2 id={cardTitleId(template)} tabIndex={-1} className={styles.cardTitle}>
+        {template.title}
+      </h2>
       {template.description && <p className={styles.description}>{template.description}</p>}
       <p className={styles.meta}>{plural(template.fields.length, 'field')}</p>
       <p className={styles.meta}>{plural(responseCount, 'response')}</p>
@@ -53,6 +59,17 @@ export function TemplateCard({ template, responseCount }: TemplateCardProps) {
         >
           View responses{forTitle}
         </ButtonLink>
+        {/* On the card only, never in the builder, where it would meet the unsaved-changes guard (D8-9). */}
+        <Button
+          variant="dangerQuiet"
+          size="sm"
+          icon="trash"
+          onClick={() => {
+            onDelete(template);
+          }}
+        >
+          Delete{forTitle}
+        </Button>
       </div>
       {!canRespond && (
         <p id={reasonId} className={styles.meta}>

@@ -8,6 +8,8 @@ interface DialogProps {
   onClose: () => void;
   /** Where focus goes on close if the element that opened the dialog has left the page. */
   fallbackFocusId: string;
+  /** `wide` fits a whole form, as Preview shows. */
+  size?: 'default' | 'wide';
   children: ReactNode;
 }
 
@@ -17,7 +19,14 @@ interface DialogProps {
  * from fresh state each time. Focus goes back to whatever opened the dialog; this is done here
  * rather than left to the browser, so it also works when that element is gone by then.
  */
-export function Dialog({ open, title, onClose, fallbackFocusId, children }: DialogProps) {
+export function Dialog({
+  open,
+  title,
+  onClose,
+  fallbackFocusId,
+  size = 'default',
+  children,
+}: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const titleId = useId();
@@ -44,7 +53,12 @@ export function Dialog({ open, title, onClose, fallbackFocusId, children }: Dial
   }, [open, fallbackFocusId]);
 
   return (
-    <dialog ref={ref} aria-labelledby={titleId} className={styles.dialog} onClose={onClose}>
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      className={[styles.dialog, size === 'wide' && styles.wide].filter(Boolean).join(' ')}
+      onClose={onClose}
+    >
       {open && (
         <>
           <h2 id={titleId} className={styles.title}>

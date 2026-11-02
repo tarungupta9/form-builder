@@ -1,11 +1,26 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router';
-import { BuilderPage } from '../features/builder/BuilderPage';
-import { FillPage } from '../features/fill/FillPage';
-import { ResponsesPage } from '../features/responses/ResponsesPage';
 import { TemplatesPage } from '../features/templates-list/TemplatesPage';
 import { AppShell } from './AppShell';
 import { NotFound } from './NotFound';
 import { RouteError } from './RouteError';
+
+/*
+ * The landing page loads with the app, so it never shows a loading state. The other pages each
+ * load on first visit (ADR 0017): dnd-kit comes only with the builder, and Fill only with a
+ * response. A chunk that fails to load throws while rendering, and `RouteError` offers a reload.
+ */
+const BuilderPage = lazy(() =>
+  import('../features/builder/BuilderPage').then((module) => ({ default: module.BuilderPage })),
+);
+const FillPage = lazy(() =>
+  import('../features/fill/FillPage').then((module) => ({ default: module.FillPage })),
+);
+const ResponsesPage = lazy(() =>
+  import('../features/responses/ResponsesPage').then((module) => ({
+    default: module.ResponsesPage,
+  })),
+);
 
 /** Every view has a URL, so each one survives a full page refresh. */
 export const routes: RouteObject[] = [

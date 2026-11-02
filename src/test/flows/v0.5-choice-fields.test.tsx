@@ -12,6 +12,7 @@ import type { UserEvent } from '@testing-library/user-event';
 import type { ExportDocument } from '../../features/export/exportModel';
 import { printDocument } from '../../features/export/printDocument';
 import { renderApp } from '../renderApp';
+import { FLOW_TIMEOUT_MS } from '../timers';
 
 vi.mock('../../features/export/printDocument', () => ({ printDocument: vi.fn() }));
 const print = vi.mocked(printDocument);
@@ -41,7 +42,7 @@ async function save(user: UserEvent) {
   await screen.findByText(/Last saved/);
 }
 
-describe('v0.5 demo: choice fields', () => {
+describe('v0.5 demo: choice fields', { timeout: FLOW_TIMEOUT_MS }, () => {
   beforeEach(() => {
     print.mockResolvedValue();
   });
