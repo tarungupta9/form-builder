@@ -3,10 +3,12 @@ import { type Field, type FormTemplate, takesAnswer } from '../../domain/templat
 import { definitionOf } from '../../fields/registry';
 import { uiOf } from '../../fields/ui-registry';
 import { Setting, controlClass } from '../../ui/Setting';
-import { Switch } from '../../ui/Switch';
 import styles from './Builder.module.css';
 import { CONFIG_IDS } from './configIds';
 import { type ConfigIssue, LABEL_MISSING } from './configIssues';
+import type { ConditionWarning } from './conditions/conditionWarnings';
+import { RequiredSettings } from './conditions/RequiredSettings';
+import { useWarningAnnouncements } from './conditions/useWarningAnnouncements';
 import { VisibilitySettings } from './conditions/VisibilitySettings';
 
 interface ConfigPanelProps {
@@ -15,6 +17,8 @@ interface ConfigPanelProps {
   graph: DependencyGraph;
   selectedField: Field | null;
   fieldIssues: readonly ConfigIssue[];
+  /** The selected field's warnings, shown live; unlike issues, they never block Save. */
+  fieldWarnings: readonly ConditionWarning[];
   /** A missing label appears only after a Save attempt, not while the author is typing. */
   showIssues: boolean;
   onFieldChange: (field: Field) => void;
@@ -52,11 +56,21 @@ function FieldSettings({
   template,
   graph,
   fieldIssues,
+  fieldWarnings,
   showIssues,
   onFieldChange,
 }: ConfigPanelProps & { field: Field }) {
   const labelMissing = fieldIssues.some((issue) => issue.message === LABEL_MISSING);
   const { Editor } = uiOf(field);
+  useWarningAnnouncements(field.id, fieldWarnings);
+  const logicProps = {
+    field,
+    fields: template.fields,
+    graph,
+    warnings: fieldWarnings,
+    showIssues,
+    onChange: onFieldChange,
+  };
   return (
     <>
       <h2 id={CONFIG_IDS.panelTitle} tabIndex={-1} className={styles.panelTitle}>
@@ -80,26 +94,12 @@ function FieldSettings({
             />
           )}
         </Setting>
-        {takesAnswer(field) && (
-          <Switch
-            label="Required"
-            description="Respondents must answer before they can submit."
-            checked={field.logic.defaultRequired}
-            onChange={(defaultRequired) => {
-              onFieldChange({ ...field, logic: { ...field.logic, defaultRequired } });
-            }}
-          />
-        )}
         <Editor field={field} context={{ fields: template.fields }} onChange={onFieldChange} />
         {/* Keyed by field, so a condition's half-typed number never carries over to another field. */}
-        <VisibilitySettings
-          key={field.id}
-          field={field}
-          fields={template.fields}
-          graph={graph}
-          showIssues={showIssues}
-          onChange={onFieldChange}
-        />
+        {takesAnswer(field) && (
+          <RequiredSettings key={`required-${field.id}`} {...logicProps} field={field} />
+        )}
+        <VisibilitySettings key={`visibility-${field.id}`} {...logicProps} />
       </div>
     </>
   );

@@ -10,7 +10,7 @@ import styles from './Fill.module.css';
 import { FillField, controlIdOf } from './FillField';
 import { type SaveError, describeSaveError } from './useSaveResponse';
 import { useFormRuntime } from './useFormRuntime';
-import { useVisibilityAnnouncements } from './useVisibilityAnnouncements';
+import { useFormChangeAnnouncements } from './useFormChangeAnnouncements';
 
 const SUMMARY_ID = 'response-error-summary';
 
@@ -30,7 +30,7 @@ export function FillForm({ template, onSubmit }: FillFormProps) {
   const [saveError, setSaveError] = useState<SaveError | null>(null);
   const focusLater = useFocusRequest();
   const visibleFields = template.fields.filter((field) => evaluation.visible.has(field.id));
-  useVisibilityAnnouncements(template.fields, evaluation.visible, values);
+  useFormChangeAnnouncements(template.fields, evaluation, values);
 
   const handleSubmit = (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();

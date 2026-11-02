@@ -18,3 +18,22 @@
   font-size: 20px;
   line-height: 28px;
 }
+
+/* A removal dialog: what goes with it, then Cancel before the destructive action. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.list {
+  padding-left: var(--space-5);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}

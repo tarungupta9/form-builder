@@ -12,7 +12,7 @@
  * own delays move the same clock, and restore real timers in `afterEach`.
  */
 import { act } from '@testing-library/react';
-import { SETTLE_MS } from '../features/fill/useVisibilityAnnouncements';
+import { SETTLE_MS } from '../features/fill/useFormChangeAnnouncements';
 import { ANNOUNCE_BATCH_MS } from '../ui/LiveRegion';
 
 export function startFakeClock(): void {

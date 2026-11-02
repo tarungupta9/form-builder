@@ -34,8 +34,8 @@ export function buildDependencyGraph(fields: readonly Field[]): DependencyGraph 
   }
   for (const field of fields) {
     for (const target of dependenciesOf(field)) {
-      // A reference to a deleted field reads nothing. From v0.7 the builder removes such
-      // references when the field is deleted (D-12).
+      // A reference to a missing field reads nothing. The builder removes such references along
+      // with the field (D-12), so only stored or hand-edited data can hold one.
       if (!known.has(target)) continue;
       reads.get(field.id)?.add(target);
       readBy.get(target)?.add(field.id);

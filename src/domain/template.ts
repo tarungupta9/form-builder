@@ -199,6 +199,24 @@ export function withVisibility<F extends Field>(field: F, change: Partial<FieldL
   return { ...field, logic: { ...field.logic, ...change } };
 }
 
+/**
+ * The field with each of its condition groups passed through `change`, keeping its own type, so
+ * code that edits every group (the D-12 reference cascade) never needs to know which groups a
+ * field has. Display-only fields have Show and Hide; input fields also Require and Not required.
+ */
+export function mapGroups<F extends Field>(
+  field: F,
+  change: (group: ConditionGroup, effect: Effect) => ConditionGroup,
+): F {
+  const { logic } = field;
+  const show = change(logic.show, 'show');
+  const hide = change(logic.hide, 'hide');
+  if (!hasRequiredAxis(logic)) return { ...field, logic: { ...logic, show, hide } };
+  const require = change(logic.require, 'require');
+  const unrequire = change(logic.unrequire, 'unrequire');
+  return { ...field, logic: { ...logic, show, hide, require, unrequire } };
+}
+
 export const emptyGroup = (): ConditionGroup => ({ match: 'all', conditions: [] });
 
 export const defaultFieldLogic = (): FieldLogic => ({

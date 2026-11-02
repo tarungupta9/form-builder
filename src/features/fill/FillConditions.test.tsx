@@ -173,3 +173,85 @@ describe('Fill: conditional visibility', () => {
     },
   );
 });
+
+/** Amount, then Receipt number: required when Amount is over 50, hidden when the type is Meals. */
+function receiptClaim() {
+  const type = singleSelectField('Expense type', {
+    config: { options: options('Travel', 'Meals'), display: 'radio' },
+  });
+  const amount = numberField('Amount');
+  const receipt = textField('Receipt number');
+  receipt.logic.require = group(
+    'all',
+    condition(amount.id, { kind: 'number', op: 'gt', value: 50 }),
+  );
+  receipt.logic.hide = group(
+    'all',
+    condition(type.id, { kind: 'choice', op: 'equals', value: type.config.options[1]!.id }),
+  );
+  const form: FormTemplate = template([type, amount, receipt], 'Expense claim');
+  createRepositories(localStorage).templates.put(form);
+  return { form, amount, receipt };
+}
+
+const receiptBox = () => screen.queryByRole('textbox', { name: /^Receipt number/ });
+const amountBox = () => screen.getByRole('textbox', { name: /^Amount/ });
+
+describe('Fill: conditional required', () => {
+  it('marks Receipt number Required as soon as Amount goes over 50, before submit', async () => {
+    const { form } = receiptClaim();
+    const { user } = renderApp(`/templates/${form.id}/respond`);
+    await screen.findByRole('radio', { name: 'Travel' });
+    expect(receiptBox()).not.toBeRequired();
+
+    await user.type(amountBox(), '60');
+
+    expect(receiptBox()).toBeRequired();
+    expect(receiptBox()).toHaveAccessibleName(/Required/);
+    await user.clear(amountBox());
+    await user.type(amountBox(), '50');
+    expect(receiptBox()).not.toBeRequired();
+  });
+
+  it('requires Receipt number once Amount is over 50, and blocks submit until it is answered', async () => {
+    const { form } = receiptClaim();
+    const { user } = renderApp(`/templates/${form.id}/respond`);
+    await user.type(await screen.findByRole('textbox', { name: /^Amount/ }), '60');
+
+    await user.click(screen.getByRole('button', { name: 'Submit response' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Enter an answer for Receipt number',
+    );
+    expect(storedResponses()).toHaveLength(0);
+
+    await user.type(receiptBox()!, 'R-1001');
+    await user.click(screen.getByRole('button', { name: 'Submit response' }));
+    expect(await screen.findByRole('heading', { name: 'Response submitted' })).toBeVisible();
+  });
+
+  it('submits with Receipt number empty when Amount is 50 or less', async () => {
+    const { form, amount, receipt } = receiptClaim();
+    const { user } = renderApp(`/templates/${form.id}/respond`);
+    await user.type(await screen.findByRole('textbox', { name: /^Amount/ }), '40');
+
+    await user.click(screen.getByRole('button', { name: 'Submit response' }));
+
+    expect(await screen.findByRole('heading', { name: 'Response submitted' })).toBeVisible();
+    const [stored] = storedResponses();
+    expect(stored?.status === 'submitted' && Object.keys(stored.answers)).toEqual([amount.id]);
+    expect(stored?.status === 'submitted' && stored.answers[receipt.id]).toBeFalsy();
+  });
+
+  it('submits when a field required by condition is hidden', async () => {
+    const { form } = receiptClaim();
+    const { user } = renderApp(`/templates/${form.id}/respond`);
+    await user.type(await screen.findByRole('textbox', { name: /^Amount/ }), '60');
+
+    await user.click(screen.getByRole('radio', { name: 'Meals' }));
+    expect(receiptBox()).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit response' }));
+
+    expect(await screen.findByRole('heading', { name: 'Response submitted' })).toBeVisible();
+    expect(storedResponses()).toHaveLength(1);
+  });
+});

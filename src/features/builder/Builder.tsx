@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { newFieldId } from '../../domain/ids';
+import { dependantsOf } from '../../domain/rules/references';
 import type { Field, FieldType, FormTemplate } from '../../domain/template';
 import { definitionFor } from '../../fields/registry';
 import { KEEP_FOCUS } from '../../app/navigation';
@@ -9,6 +10,7 @@ import { describeStorageError } from '../../storage/storageMessages';
 import { Button, ButtonLink, IconButton } from '../../ui/Button';
 import { FailureAlert } from '../../ui/ErrorSummary';
 import { useAnnounce } from '../../ui/LiveRegion';
+import { removedConditions } from '../../ui/RemovalDialog';
 import { PageHeader } from '../../ui/PageHeader';
 import { formatDateTime } from '../../ui/format';
 import styles from './Builder.module.css';
@@ -16,11 +18,15 @@ import { insertionIndex } from './builderReducer';
 import { Canvas, canvasItemId, fieldName } from './Canvas';
 import { CONFIG_IDS } from './configIds';
 import { ConfigPanel } from './ConfigPanel';
+import type { ConditionWarning } from './conditions/conditionWarnings';
 import { FieldPalette } from './FieldPalette';
 import { IssueSummary } from './IssueSummary';
+import { type PendingRemoval, RemoveFieldDialog } from './RemoveFieldDialog';
 import { DETAILS_IDS, TemplateDetailsDialog } from './TemplateDetailsDialog';
 import { useBuilder } from './useBuilder';
 import { useFocusRequest } from '../../ui/useFocusRequest';
+
+const NO_WARNINGS: readonly ConditionWarning[] = [];
 
 interface BuilderProps {
   initial: FormTemplate;
@@ -34,7 +40,7 @@ interface BuilderProps {
  * owns the screen-only concerns: focus, announcements and navigation after a save.
  */
 export function Builder({ initial, isNew }: BuilderProps) {
-  const { state, dispatch, graph, issues, save } = useBuilder(initial);
+  const { state, dispatch, graph, issues, warnings, save } = useBuilder(initial);
   const { template, selectedFieldId } = state;
   const navigate = useNavigate();
   const announce = useAnnounce();
@@ -42,6 +48,7 @@ export function Builder({ initial, isNew }: BuilderProps) {
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [storageError, setStorageError] = useState<StorageError | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [removal, setRemoval] = useState<PendingRemoval | null>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
   const showSummary = saveAttempted && issues.count > 0;
 
@@ -65,12 +72,32 @@ export function Builder({ initial, isNew }: BuilderProps) {
     );
   };
 
+  /**
+   * A field nothing reads goes at once, as before. A field others read asks first (D-12); the
+   * dialog then owns focus on both Cancel and confirm, so this sets no focus of its own.
+   */
   const removeField = (field: Field) => {
     const index = template.fields.findIndex((candidate) => candidate.id === field.id);
     const neighbour = template.fields[index + 1] ?? template.fields[index - 1];
+    const focusAfter = neighbour ? canvasItemId(neighbour.id) : 'canvas-title';
+    const dependants = dependantsOf(template.fields, field.id);
+    if (dependants.length > 0) {
+      setRemoval({ field, dependants, focusAfter, open: true });
+      return;
+    }
     dispatch({ type: 'field/removed', fieldId: field.id });
-    focusLater(neighbour ? canvasItemId(neighbour.id) : 'canvas-title');
+    focusLater(focusAfter);
     announce(`Removed ${fieldName(field)}`);
+  };
+
+  const closeRemoval = () => {
+    setRemoval((pending) => pending && { ...pending, open: false });
+  };
+
+  const confirmRemoval = ({ field, dependants }: PendingRemoval) => {
+    dispatch({ type: 'field/removed', fieldId: field.id });
+    closeRemoval();
+    announce(`Removed ${fieldName(field)} and ${removedConditions(dependants)}.`);
   };
 
   const handleSave = () => {
@@ -169,12 +196,15 @@ export function Builder({ initial, isNew }: BuilderProps) {
           graph={graph}
           selectedField={selectedField}
           fieldIssues={(selectedField && issues.fields.get(selectedField.id)) ?? []}
+          fieldWarnings={(selectedField && warnings.get(selectedField.id)) ?? NO_WARNINGS}
           showIssues={saveAttempted}
           onFieldChange={(field) => {
             dispatch({ type: 'field/updated', field });
           }}
         />
       </div>
+
+      <RemoveFieldDialog removal={removal} onCancel={closeRemoval} onConfirm={confirmRemoval} />
 
       <TemplateDetailsDialog
         open={detailsOpen}

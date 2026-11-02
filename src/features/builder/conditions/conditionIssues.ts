@@ -4,19 +4,15 @@
  * broken condition never holds), so they are about the author's intent, not about safety.
  */
 import { assertNever } from '../../../domain/assertNever';
-import type { ConditionId, OptionId } from '../../../domain/ids';
+import type { ConditionId } from '../../../domain/ids';
 import { type DependencyGraph, wouldCreateCycle } from '../../../domain/rules/graph';
 import { isPredicateComplete } from '../../../domain/rules/predicates';
-import type { Condition, Field, Predicate } from '../../../domain/template';
+import { optionIdsOf } from '../../../domain/rules/references';
+import { type Condition, type Field, type Predicate, groupsOf } from '../../../domain/template';
 import type { ConditionTarget } from '../../../fields/contract';
 import { definitionOf } from '../../../fields/registry';
 import { fieldName } from '../Canvas';
-import {
-  type ConditionControl,
-  EDITABLE_EFFECTS,
-  GROUP_COPY,
-  conditionControlId,
-} from './conditionGroups';
+import { type ConditionControl, GROUP_COPY, conditionControlId } from './conditionGroups';
 
 export interface ConditionIssue {
   conditionId: ConditionId;
@@ -56,13 +52,6 @@ function missingValue(predicate: Predicate): Problem {
   }
 }
 
-/** The option IDs a comparison names; empty for kinds that have no options. */
-function optionIdsOf(predicate: Predicate): OptionId[] {
-  if (predicate.kind === 'multi') return predicate.value;
-  if (predicate.kind === 'choice' && predicate.value !== null) return [predicate.value];
-  return [];
-}
-
 function namesRemovedOption(predicate: Predicate, target: ConditionTarget): boolean {
   const known = new Set(
     target.kind === 'choice' || target.kind === 'multi' ? target.options.map((o) => o.id) : [],
@@ -79,7 +68,8 @@ function problemWith(
 ): Problem | null {
   const { predicate } = condition;
   const target = byId.get(condition.targetFieldId);
-  // Until v0.7 removes these references along with the field (D-12), the author does (D6-2).
+  // The builder removes these along with the field (D-12), so only stored or hand-edited data
+  // can hold one; it is shown, never silently dropped (D6-2, D7-10).
   if (!target) return { control: 'target', text: 'the field it reads was removed' };
 
   const reads = definitionOf(target).conditionTarget(target);
@@ -93,6 +83,7 @@ function problemWith(
     };
   }
   // A missing option would make "does not equal" hold for every answer, so it is never ignored.
+  // As with a missing field, only stored data can hold one: removing an option removes these.
   if (namesRemovedOption(predicate, reads)) {
     return { control: 'value', text: 'an option it compares against was removed' };
   }
@@ -116,8 +107,9 @@ export function conditionIssues(
   graph: DependencyGraph,
 ): ConditionIssue[] {
   const byId = new Map<string, Field>(fields.map((field) => [field.id, field]));
-  return EDITABLE_EFFECTS.flatMap((effect) =>
-    owner.logic[effect].conditions.flatMap((condition, index) => {
+  // Every group the field has, in the order the panel shows them: show, hide, required, not-required.
+  return groupsOf(owner.logic).flatMap(({ effect, group }) =>
+    group.conditions.flatMap((condition, index) => {
       const problem = problemWith(condition, owner, byId, graph);
       if (!problem) return [];
       return [

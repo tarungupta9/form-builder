@@ -1,10 +1,11 @@
 import { OptionalNumberInput, Setting } from '../../ui/Setting';
 import type { EditorProps } from '../contract';
+import { optionDependantsOf } from '../../domain/rules/references';
 import { OptionsEditor } from '../shared/OptionsEditor';
 import styles from '../shared/Settings.module.css';
 import { selectionLimitIssues } from './selectionRules';
 
-export function MultiSelectEditor({ field, onChange }: EditorProps<'multiSelect'>) {
+export function MultiSelectEditor({ field, context, onChange }: EditorProps<'multiSelect'>) {
   const { config } = field;
   const update = (patch: Partial<typeof config>) => {
     onChange({ ...field, config: { ...config, ...patch } });
@@ -14,6 +15,7 @@ export function MultiSelectEditor({ field, onChange }: EditorProps<'multiSelect'
     <div className={styles.stack}>
       <OptionsEditor
         options={config.options}
+        usedBy={(optionId) => optionDependantsOf(context.fields, field.id, optionId)}
         onChange={(options) => {
           update({ options });
         }}

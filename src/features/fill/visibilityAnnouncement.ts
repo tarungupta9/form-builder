@@ -7,7 +7,7 @@ import { plural } from '../../ui/format';
 const nameOf = (field: Field): string => field.label.trim() || 'Untitled field';
 
 /** One or two fields by name, so the respondent knows which; from three, a count (D6-9). */
-function describe(fields: readonly Field[]): string {
+export function describeFields(fields: readonly Field[]): string {
   const [first, second] = fields;
   if (!first) return '';
   if (fields.length === 1) return nameOf(first);
@@ -32,8 +32,8 @@ export function describeVisibilityChange(
   if (shown.length === 0 && hidden.length === 0) return null;
 
   const parts = [
-    shown.length > 0 ? `${describe(shown)} shown` : null,
-    hidden.length > 0 ? `${describe(hidden)} hidden` : null,
+    shown.length > 0 ? `${describeFields(shown)} shown` : null,
+    hidden.length > 0 ? `${describeFields(hidden)} hidden` : null,
   ].filter((part) => part !== null);
   const sentence = `${parts.join(', ')}.`;
 

@@ -19,8 +19,11 @@ interface ConditionGroupEditorProps {
   fields: readonly Field[];
   choices: readonly TargetChoice[];
   loopHintId: string | undefined;
-  /** A static note under the sentence, such as the visible-by-default hint (D6-6). */
-  note: string | null;
+  /**
+   * Warnings about this group (`conditionWarnings`), shown under its sentence and read with the
+   * group. They never block Save.
+   */
+  notes: readonly string[];
   issues: readonly ConditionIssue[];
   onChange: (group: ConditionGroup) => void;
 }
@@ -43,7 +46,7 @@ export function ConditionGroupEditor({
   fields,
   choices,
   loopHintId,
-  note,
+  notes,
   issues,
   onChange,
 }: ConditionGroupEditorProps) {
@@ -57,6 +60,7 @@ export function ConditionGroupEditor({
     matchHint: `${baseId}-match-hint`,
     add: `${baseId}-add`,
     addHint: `${baseId}-add-hint`,
+    note: (index: number) => `${baseId}-note-${index}`,
   };
   const { conditions } = group;
   const addBlockedReason =
@@ -84,7 +88,10 @@ export function ConditionGroupEditor({
   };
 
   return (
-    <fieldset className={styles.group}>
+    <fieldset
+      className={styles.group}
+      aria-describedby={notes.length > 0 ? notes.map((_, i) => ids.note(i)).join(' ') : undefined}
+    >
       <legend className={styles.legend}>{copy.title}</legend>
       {conditions.length === 0 ? (
         <p className={styles.empty}>No conditions.</p>
@@ -112,7 +119,12 @@ export function ConditionGroupEditor({
           <p id={ids.matchHint} className={styles.hint}>
             {MATCH_HINT}
           </p>
-          {note && <p className={styles.note}>{note}</p>}
+          {notes.map((note, index) => (
+            <p key={note} id={ids.note(index)} className={styles.note}>
+              <span className="visually-hidden">Note: </span>
+              {note}
+            </p>
+          ))}
           <ol className={styles.rows}>
             {conditions.map((condition, index) => (
               <ConditionRow

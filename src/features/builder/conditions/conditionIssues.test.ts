@@ -164,14 +164,37 @@ describe('conditionIssues', () => {
     ]);
   });
 
-  it('leaves the require groups alone until the builder can edit them (v0.7)', () => {
+  it('flags an unfinished required condition, numbered within its own group', () => {
     const nights = numberField('Nights');
     const note = textField('Note');
     note.logic.require = group(
       'all',
+      condition(nights.id, { kind: 'number', op: 'gt', value: 50 }),
       condition(nights.id, { kind: 'number', op: 'gt', value: null }),
     );
 
-    expect(issuesOf(note, [nights, note])).toEqual([]);
+    const [issue] = issuesOf(note, [nights, note]);
+
+    expect(issue?.message).toBe('Required condition 2: enter a number.');
+    expect(issue?.controlId).toBe(
+      conditionControlId(note.logic.require.conditions[1]!.id, 'value'),
+    );
+  });
+
+  it('numbers conditions show, hide, required, then not-required', () => {
+    const nights = numberField('Nights');
+    const note = textField('Note');
+    const unfinished = () => condition(nights.id, { kind: 'number', op: 'gt', value: null });
+    note.logic.unrequire = group('all', unfinished());
+    note.logic.require = group('all', unfinished());
+    note.logic.hide = group('all', unfinished());
+    note.logic.show = group('all', unfinished());
+
+    expect(messagesOf(note, [nights, note])).toEqual([
+      'Show condition 1: enter a number.',
+      'Hide condition 1: enter a number.',
+      'Required condition 1: enter a number.',
+      'Not-required condition 1: enter a number.',
+    ]);
   });
 });

@@ -1,5 +1,5 @@
-/* The Visibility part of the config panel: the start-up radio, then one block per group. */
-.visibility {
+/* The Required and Visibility parts of the config panel: the default, then one block per group. */
+.section {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -29,6 +29,11 @@
   padding: 0 var(--space-1);
   font-size: 15px;
   font-weight: 600;
+}
+
+.summary {
+  font-size: 15px;
+  line-height: 22px;
 }
 
 .empty,

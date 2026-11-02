@@ -4,14 +4,16 @@ import type { FieldId } from '../../domain/ids';
 import type { ResponseValues } from '../../domain/response';
 import { num, numberField, textField } from '../../test/fixtures';
 import { LiveRegionProvider } from '../../ui/LiveRegion';
-import { SETTLE_MS, useVisibilityAnnouncements } from './useVisibilityAnnouncements';
+import { SETTLE_MS, useFormChangeAnnouncements } from './useFormChangeAnnouncements';
 
 const type = textField('Expense type');
 const nights = numberField('Nights');
 const fields = [type, nights];
+const NONE: ReadonlySet<FieldId> = new Set();
 
 interface Props {
   visible: ReadonlySet<FieldId>;
+  required?: ReadonlySet<FieldId>;
   values?: ResponseValues;
 }
 
@@ -21,8 +23,8 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 function renderAnnouncer(initial: Props) {
   return renderHook(
-    ({ visible, values = {} }: Props) => {
-      useVisibilityAnnouncements(fields, visible, values);
+    ({ visible, required = NONE, values = {} }: Props) => {
+      useFormChangeAnnouncements(fields, { visible, required }, values);
     },
     { initialProps: initial, wrapper },
   );
@@ -37,7 +39,7 @@ function settle() {
 
 const spoken = () => screen.getByTestId('live-region').textContent;
 
-describe('useVisibilityAnnouncements', () => {
+describe('useFormChangeAnnouncements', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -113,5 +115,27 @@ describe('useVisibilityAnnouncements', () => {
     unmount();
 
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('announces a field becoming required once the change settles, joined with visibility changes', () => {
+    const { rerender } = renderAnnouncer({ visible: new Set([type.id]) });
+
+    rerender({ visible: new Set([type.id]), required: new Set([type.id]) });
+    settle();
+    expect(spoken()).toBe('Expense type is now required.');
+
+    rerender({ visible: new Set([type.id, nights.id]), required: new Set() });
+    settle();
+    expect(spoken()).toBe('Nights shown. Expense type is no longer required.');
+  });
+
+  it('says nothing when a field becomes required and optional again before it settles', () => {
+    const { rerender } = renderAnnouncer({ visible: new Set([type.id]) });
+
+    rerender({ visible: new Set([type.id]), required: new Set([type.id]) });
+    rerender({ visible: new Set([type.id]), required: new Set() });
+    settle();
+
+    expect(spoken()).toBe('');
   });
 });

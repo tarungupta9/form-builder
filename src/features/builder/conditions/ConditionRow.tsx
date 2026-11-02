@@ -115,8 +115,9 @@ export function ConditionRow({
 }
 
 /**
- * A target the picker would not offer: deleted (until v0.7 cleans these up, D-12) or, in
- * hand-edited data, a field conditions cannot read. It stays selected, so the select never
+ * A target the picker would not offer, which only stored or hand-edited data can hold: a field
+ * that is missing (the builder removes conditions along with their field, D-12) or one that
+ * conditions cannot read. It stays selected, so the select never
  * silently changes what the condition reads, and Save says what is wrong.
  */
 function unavailableTargetName(condition: Condition, fields: readonly Field[]): string {

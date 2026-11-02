@@ -63,7 +63,7 @@ The spec asks us to decide the ambiguous 10–20% ourselves and to document the 
 | --- | --- | --- | --- |
 | D-1 | AND or OR when a field has several conditions **(Q-1, resolved)** | Conditions are grouped by effect: each field has a _show_ and a _hide_ group, and input fields also have _require_ and _not-require_ groups. **Each group has its own `match: 'all' \| 'any'`**, defaulting to `all`. Groups are flat; nested groups such as `(A and B) or (C and D)` are not supported. | With only `equals` on single select, "show if reason = A **or** B" is impossible under AND-only. A single `match` per field is not enough either: "show if type = Travel **or** Meals" and "require if amount > 50 **and** payment = Cash" on the same field need different settings. Nested groups would cover every case, but their cost is in the builder UI, its accessibility and testing, not the engine. The shape extends to nesting later without breaking stored data, because a flat list is a valid nested one. |
 | D-2 | Conflicting effects (the _show_ and _hide_ groups are both active) | **Hide beats show**, and **require beats not-require**. | Hiding fails closed: when the rules are ambiguous, collect less data. Requiring fails safe: when unsure, the field is not left optional. The builder shows a warning when a field has opposing effects. |
-| D-3 | A group whose effect equals the default (for example _show_ on a field that is visible by default) | It has no effect. The builder flags it as a no-op. | This follows directly from the spec: the default applies when no condition is active. |
+| D-3 | A group whose effect equals the default (for example _show_ on a field that is visible by default) | It has no effect in two cases: _show_ on a field visible by default, and _not-require_ on a field optional by default. The winning groups differ: _hide_ on a field hidden by default, and _require_ on a field required by default, have no effect **only while the opposite group is empty**, because once it has conditions they override it. The builder flags each case as a non-blocking warning ([ADR 0015](decisions/0015-confirm-and-cascade-deleted-references.md)). | This follows the spec (the default applies when no condition is active) and D-2. Corrected in v0.7: the first wording, "it has no effect", was true only for the two non-winning groups. |
 | D-4 | Target field is empty | The condition is **inactive**, for every operator, including `does not equal` and `contains none of`. | The spec says the default state applies "when the target field has no value". |
 | D-5 | Chained conditions (A → B → C) where B is hidden | A hidden field's **effective value is empty**, so conditions that read it are inactive and C falls back to its default. Fields are evaluated in **topological order**. | This gives correct chaining in a single pass with no fixed-point iteration. |
 | D-6 | Cycles (A depends on B, B depends on A) | The builder refuses any condition that would create a cycle: such targets are disabled in the picker, with the reason shown. The engine is also defensive and treats a field in a cycle as default. | Cycles have no well-defined meaning. Preventing them at authoring time beats resolving them at runtime. |
@@ -77,7 +77,7 @@ The spec asks us to decide the ambiguous 10–20% ourselves and to document the 
 | --- | --- | --- |
 | D-10 | Editing a template after responses exist | Each submitted response stores a **snapshot** of the template title, description and the visible fields it was answered against. Re-downloading a PDF always reproduces what was submitted. |
 | D-11 | Select values | Values store a stable `OptionId`, never the label, so renaming an option does not break conditions or past responses. |
-| D-12 | Deleting a field that other fields reference | A confirmation dialog lists the dependants. On confirm, the conditions and calculation sources that point at the field are removed. If a calculation is left with no sources, it becomes a save-blocking config error. |
+| D-12 | Deleting a field that other fields reference | A confirmation dialog lists the dependants. On confirm, the conditions and calculation sources that point at the field are removed. If a calculation is left with no sources, it becomes a save-blocking config error. Deleting an **option** that conditions compare with works the same way, and a multi condition naming it among others is removed whole ([ADR 0015](decisions/0015-confirm-and-cascade-deleted-references.md)). |
 | D-13 | Changing a field's type | Not supported. You delete the field and add a new one. This keeps each field's config and value types fixed for its lifetime. |
 | D-14 | Calculation with empty sources | Empty or hidden sources are ignored, and Average divides by the count of filled sources. If every source is empty, the result is empty (shown as "—"), never `0`. |
 | D-15 | Number decimals | Extra decimals are a validation error, not silently rounded. The input is `type="text"` with `inputMode="decimal"`, which avoids `type="number"`'s scroll-wheel changes and acceptance of `e`. |
@@ -437,15 +437,17 @@ The builder state is a pure reducer, so every editing rule can be unit-tested wi
 type BuilderAction =
   | { type: 'details/changed'; title: string; description: string }   // the details dialog applies both at once (ADR 0009)
   | { type: 'field/added'; field: Field }          // created by the caller, inserted after the selection
-  | { type: 'field/updated'; field: Field }
-  | { type: 'field/removed'; fieldId: FieldId }    // reference cascade (D-12) from v0.7
+  | { type: 'field/updated'; field: Field }        // also removes conditions on options it no longer has (D-12)
+  | { type: 'field/removed'; fieldId: FieldId }    // also removes every condition that reads the field (D-12)
   | { type: 'field/selected'; fieldId: FieldId | null }
   | { type: 'template/saved'; template: FormTemplate };
 // From v0.8: { type: 'field/moved'; fieldId: FieldId; toIndex: number }
 
 interface BuilderState { template: FormTemplate; selectedFieldId: FieldId | null }
 // From v0.8 the state also keeps the last saved template, so isDirty can be derived.
-// Derived, not stored: configIssues (blocks Save); from v0.6, dependants(fieldId) and allowedTargets(fieldId).
+// Derived, not stored: configIssues (the only thing that blocks Save); from v0.6, allowedTargets(fieldId);
+// from v0.7, conditionWarnings(field) (D-2, D-3: shown and announced, never blocks Save) and
+// dependantsOf(fields, fieldId), which the removal dialog lists before the cascade.
 ```
 
 ### 5.3 Rules engine (pure)
@@ -585,7 +587,7 @@ Export layout: a header with the form title, the description when set, "Submitte
 | Prefix and suffix | Rendered as adornments and included in the input's accessible description. |
 | Calculation | A read-only `<output>`, associated with its label, that names its sources. |
 | Submit errors | An error summary at the top gets focus. Each error is a link that jumps to its field (the GOV.UK pattern). |
-| Dynamic changes | One polite live region announces when fields are shown or hidden, when the builder saves, and when a field or condition is added, removed or moved. Fill speaks a visibility change once it has settled (400 ms), as the net change since the last announcement: one or two fields by name ("Nights and Approval reason shown"), a count from three ("3 fields hidden"), plus "Its answer won't be submitted." when a field with an answer hides. Typing never floods a screen reader. |
+| Dynamic changes | One polite live region announces when fields are shown or hidden, when the builder saves, and when a field or condition is added, removed or moved. Fill speaks a visibility change once it has settled (400 ms), as the net change since the last announcement: one or two fields by name ("Nights and Approval reason shown"), a count from three ("3 fields hidden"), plus "Its answer won't be submitted." when a field with an answer hides. From v0.7 the same settled message also says when a field on screen becomes required or optional ("Receipt number is now required."). The builder announces a condition warning once, when the author's edit makes it appear, and a removal with what went with it ("Removed Amount and 1 condition on Receipt number."). Typing never floods a screen reader. |
 | Dialogs | Template details (v0.1, ADR 0009) and Preview (v0.8) use `ui/Dialog`: a native `<dialog>` with `showModal()`, which gives a focus trap and Escape to close. `Dialog` returns focus to the trigger itself, falling back to a named element when the trigger has gone. |
 | Other | A visible `:focus-visible` ring with at least 3:1 contrast, 24×24 px minimum targets (2.5.8), focus never hidden behind sticky panels (2.4.11), `prefers-reduced-motion` respected, and a focus/title update on every route change. |
 

@@ -344,4 +344,149 @@ describe('evaluateForm: required state', () => {
     });
     expect(shownAndRequired.required.has(receipt.id)).toBe(true);
   });
+
+  it('require beats not-require on a field that is optional by default', () => {
+    const amount = numberField('Amount');
+    const receipt = textField('Receipt number');
+    receipt.logic.require = group(
+      'all',
+      condition(amount.id, { kind: 'number', op: 'gt', value: 50 }),
+    );
+    receipt.logic.unrequire = group(
+      'all',
+      condition(amount.id, { kind: 'number', op: 'lt', value: 100 }),
+    );
+
+    const result = evaluateForm([amount, receipt], { [amount.id]: num('75') });
+
+    expect(result.required.has(receipt.id)).toBe(true);
+  });
+
+  it('not-require does nothing on a field that is already optional', () => {
+    const amount = numberField('Amount');
+    const receipt = textField('Receipt number');
+    receipt.logic.unrequire = group(
+      'all',
+      condition(amount.id, { kind: 'number', op: 'lt', value: 100 }),
+    );
+    const fields = [amount, receipt];
+
+    expect(evaluateForm(fields, { [amount.id]: num('20') }).required.has(receipt.id)).toBe(false);
+    expect(evaluateForm(fields, { [amount.id]: num('200') }).required.has(receipt.id)).toBe(false);
+  });
+
+  it('never marks a hidden field as required, even when its require condition matches', () => {
+    const type = select('Expense type', [travel, meals]);
+    const amount = numberField('Amount');
+    const receipt = textField('Receipt number');
+    receipt.logic.hide = group('all', condition(type.id, isChoice(meals.id)));
+    receipt.logic.require = group(
+      'all',
+      condition(amount.id, { kind: 'number', op: 'gt', value: 50 }),
+    );
+    const fields = [type, amount, receipt];
+
+    const shown = evaluateForm(fields, { [type.id]: choice(travel.id), [amount.id]: num('60') });
+    expect(shown.required.has(receipt.id)).toBe(true);
+
+    const hidden = evaluateForm(fields, { [type.id]: choice(meals.id), [amount.id]: num('60') });
+    expect(hidden.visible.has(receipt.id)).toBe(false);
+    expect(hidden.required.has(receipt.id)).toBe(false);
+  });
+
+  it('resolves an "any" not-require group and an "all" require group on the same field independently', () => {
+    const amount = numberField('Amount');
+    const payment = select('Payment', [cash, card]);
+    const receipt = textField('Receipt number');
+    receipt.logic.defaultRequired = true;
+    receipt.logic.require = group(
+      'all',
+      condition(amount.id, { kind: 'number', op: 'gt', value: 50 }),
+      condition(payment.id, isChoice(cash.id)),
+    );
+    receipt.logic.unrequire = group(
+      'any',
+      condition(amount.id, { kind: 'number', op: 'lt', value: 10 }),
+      condition(payment.id, isChoice(card.id)),
+    );
+    const fields: Field[] = [amount, payment, receipt];
+    const required = (values: ResponseValues) =>
+      evaluateForm(fields, values).required.has(receipt.id);
+
+    // One not-require condition is enough to make it optional ("any")...
+    expect(required({ [amount.id]: num('80'), [payment.id]: choice(card.id) })).toBe(false);
+    // ...but the require group needs both of its conditions ("all"), and then it wins.
+    expect(required({ [amount.id]: num('5'), [payment.id]: choice(cash.id) })).toBe(false);
+    expect(required({ [amount.id]: num('80'), [payment.id]: choice(cash.id) })).toBe(true);
+    expect(required({ [amount.id]: num('30') })).toBe(true);
+  });
+
+  it('resolves all four groups of one field, each with its own match', () => {
+    const type = select('Expense type', [travel, meals, other]);
+    const amount = numberField('Amount');
+    const receipt = textField('Receipt number');
+    receipt.logic.defaultVisible = false;
+    receipt.logic.show = group(
+      'any',
+      condition(type.id, isChoice(travel.id)),
+      condition(type.id, isChoice(meals.id)),
+    );
+    receipt.logic.hide = group(
+      'all',
+      condition(type.id, isChoice(meals.id)),
+      condition(amount.id, { kind: 'number', op: 'lt', value: 5 }),
+    );
+    receipt.logic.require = group(
+      'any',
+      condition(amount.id, { kind: 'number', op: 'gt', value: 50 }),
+      condition(type.id, isChoice(meals.id)),
+    );
+    receipt.logic.unrequire = group(
+      'all',
+      condition(amount.id, { kind: 'number', op: 'lt', value: 20 }),
+    );
+    const fields: Field[] = [type, amount, receipt];
+    const state = (values: ResponseValues) => {
+      const result = evaluateForm(fields, values);
+      return [result.visible.has(receipt.id), result.required.has(receipt.id)];
+    };
+
+    expect(state({ [type.id]: choice(other.id), [amount.id]: num('60') })).toEqual([false, false]);
+    expect(state({ [type.id]: choice(travel.id), [amount.id]: num('30') })).toEqual([true, false]);
+    expect(state({ [type.id]: choice(travel.id), [amount.id]: num('60') })).toEqual([true, true]);
+    // Meals alone requires it ("any"), even though not-require also holds below 20.
+    expect(state({ [type.id]: choice(meals.id), [amount.id]: num('10') })).toEqual([true, true]);
+    // Hide needs both of its conditions ("all"), and then beats show.
+    expect(state({ [type.id]: choice(meals.id), [amount.id]: num('2') })).toEqual([false, false]);
+  });
+
+  it('leaves a require condition inactive while the field it reads is hidden (D-5)', () => {
+    const type = select('Expense type', [travel, meals]);
+    const amount = numberField('Amount');
+    amount.logic.hide = group('all', condition(type.id, isChoice(meals.id)));
+    const receipt = textField('Receipt number');
+    receipt.logic.require = group(
+      'all',
+      condition(amount.id, { kind: 'number', op: 'gt', value: 50 }),
+    );
+    const fields = [type, amount, receipt];
+
+    const result = evaluateForm(fields, { [type.id]: choice(meals.id), [amount.id]: num('60') });
+
+    expect(result.visible.has(amount.id)).toBe(false);
+    expect(result.required.has(receipt.id)).toBe(false);
+  });
+
+  it('treats a field caught in a cycle as required only by default', () => {
+    const a = textField('A');
+    const b = textField('B');
+    a.logic.defaultRequired = true;
+    a.logic.unrequire = group('all', condition(b.id, { kind: 'text', op: 'equals', value: 'x' }));
+    b.logic.require = group('all', condition(a.id, { kind: 'text', op: 'equals', value: 'x' }));
+
+    const result = evaluateForm([a, b], { [a.id]: text('x'), [b.id]: text('x') });
+
+    expect(result.required.has(a.id)).toBe(true);
+    expect(result.required.has(b.id)).toBe(false);
+  });
 });

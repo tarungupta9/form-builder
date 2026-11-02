@@ -275,21 +275,55 @@ describe('Visibility settings', () => {
       const note =
         'This field is already visible, so these conditions only matter if it starts hidden.';
       expect(showGroup().getByText(note)).toBeVisible();
+      expect(screen.getByRole('group', { name: 'Show conditions' })).toHaveAccessibleDescription(
+        `Note: ${note}`,
+      );
 
       await user.click(visibility().getByRole('radio', { name: 'Hidden' }));
 
       expect(showGroup().queryByText(note)).not.toBeInTheDocument();
     });
 
-    it('edits only Show and Hide groups: required-by-condition arrives in v0.7', async () => {
-      const { user } = openBuilder([numberField('Nights'), textField('Note')]);
+    it('gives an input field Required and Visibility groups, and a section header Visibility only', async () => {
+      const { user } = openBuilder([
+        numberField('Nights'),
+        textField('Note'),
+        sectionField('Trip'),
+      ]);
+      const legends = (region: string) =>
+        within(screen.getByRole('region', { name: region }))
+          .getAllByRole('group')
+          .map((g) => g.querySelector('legend')?.textContent);
+
+      await select(user, 'Note');
+      expect(legends('Required')).toEqual(['Required conditions', 'Not-required conditions']);
+      expect(legends('Visibility')).toEqual([
+        'When the form opens',
+        'Show conditions',
+        'Hide conditions',
+      ]);
+
+      await select(user, 'Trip');
+      expect(screen.queryByRole('region', { name: 'Required' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('switch', { name: 'Required' })).not.toBeInTheDocument();
+      expect(legends('Visibility')).toHaveLength(3);
+    });
+
+    it('warns live that a field starting hidden with nothing showing it is never seen, without blocking Save', async () => {
+      const { form, user } = openBuilder([numberField('Nights'), textField('Note')]);
       await select(user, 'Note');
 
+      await user.click(visibility().getByRole('radio', { name: 'Hidden' }));
+
+      const warning = 'This field starts hidden and nothing shows it, so respondents never see it.';
+      expect(visibility().getByText(warning)).toBeVisible();
       expect(
-        visibility()
-          .getAllByRole('group')
-          .map((g) => g.querySelector('legend')?.textContent),
-      ).toEqual(['When the form opens', 'Show conditions', 'Hide conditions']);
+        visibility().getByRole('group', { name: 'When the form opens' }),
+      ).toHaveAccessibleDescription(`Note: ${warning}`);
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await screen.findByText(/Last saved/);
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(storedTemplate(form.id)?.fields[1]?.logic.defaultVisible).toBe(false);
     });
 
     it('gives a section header the same visibility settings', async () => {
@@ -365,11 +399,14 @@ describe('Visibility settings', () => {
       expect(storedTemplate(form.id)?.fields[1]?.logic.show.conditions).toEqual([]);
     });
 
-    it('keeps a condition on a removed field, says so, and blocks Save until it is fixed (D6-2)', async () => {
-      const { type, nights, reason } = expenseChain();
-      const { user } = openBuilder([type, nights, reason]);
+    it('flags a stored condition whose field is missing, and blocks Save until it is fixed (D6-2)', async () => {
+      // The builder removes these along with the field (D-12); only stored or hand-edited data
+      // can still hold one, and it is shown, never silently dropped.
+      const gone = numberField('Nights');
+      const reason = textField('Approval reason');
+      reason.logic.show = group('all', condition(gone.id, { kind: 'number', op: 'gt', value: 3 }));
+      const { user } = openBuilder([textField('Purpose'), reason]);
 
-      await user.click(screen.getByRole('button', { name: 'Remove Nights' }));
       await select(user, 'Approval reason');
       const target = showGroup().getByRole('combobox', { name: 'Show condition 1: field' });
       expect(target).toHaveDisplayValue('Removed field');

@@ -3,14 +3,15 @@
  * carry, so a Save issue can move focus to the exact control it is about.
  */
 import type { ConditionId } from '../../../domain/ids';
-import type { VisibilityEffect } from '../../../domain/template';
+import type { Effect, RequiredEffect, VisibilityEffect } from '../../../domain/template';
 
-/**
- * Visibility only in v0.6. The require and not-require groups join in v0.7: the engine already
- * resolves them, and the group editor is generic, so they are two more entries here.
- */
-export const EDITABLE_EFFECTS = ['show', 'hide'] as const satisfies readonly VisibilityEffect[];
-export type EditableEffect = (typeof EDITABLE_EFFECTS)[number];
+/** The groups the Visibility section edits, on every field. */
+export const VISIBILITY_EFFECTS = ['show', 'hide'] as const satisfies readonly VisibilityEffect[];
+/** The groups the Required section edits, on fields that take an answer. */
+export const REQUIRED_EFFECTS = [
+  'require',
+  'unrequire',
+] as const satisfies readonly RequiredEffect[];
 
 export interface GroupCopy {
   /** The fieldset's legend. */
@@ -21,9 +22,20 @@ export interface GroupCopy {
   noun: string;
 }
 
-export const GROUP_COPY: Record<EditableEffect, GroupCopy> = {
+/** The required groups use the spec's own words for the effect: "Mark as required". */
+export const GROUP_COPY: Record<Effect, GroupCopy> = {
   show: { title: 'Show conditions', lead: 'Show this field when', noun: 'Show condition' },
   hide: { title: 'Hide conditions', lead: 'Hide this field when', noun: 'Hide condition' },
+  require: {
+    title: 'Required conditions',
+    lead: 'Mark as required when',
+    noun: 'Required condition',
+  },
+  unrequire: {
+    title: 'Not-required conditions',
+    lead: 'Mark as not required when',
+    noun: 'Not-required condition',
+  },
 };
 
 export type ConditionControl = 'target' | 'operator' | 'value' | 'min' | 'max';

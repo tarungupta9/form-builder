@@ -1,30 +1,50 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
+import type { OptionId } from '../../domain/ids';
+import type { Dependant } from '../../domain/rules/references';
 import type { Option } from '../../domain/template';
 import { expectNoAxeViolations } from '../../test/axe';
-import { options } from '../../test/fixtures';
+import { options, textField } from '../../test/fixtures';
 import { LiveRegionProvider } from '../../ui/LiveRegion';
 import { OptionsEditor } from './OptionsEditor';
 
 let latest: Option[] = [];
 
-function Harness({ initial }: { initial: Option[] }) {
+type UsedBy = (optionId: OptionId) => readonly Dependant[];
+const unused: UsedBy = () => [];
+
+function Harness({ initial, usedBy }: { initial: Option[]; usedBy: UsedBy }) {
   const [current, setCurrent] = useState(initial);
   latest = current;
   return (
     <LiveRegionProvider>
-      <OptionsEditor options={current} onChange={setCurrent} />
+      <OptionsEditor options={current} usedBy={usedBy} onChange={setCurrent} />
     </LiveRegionProvider>
   );
 }
 
-const setup = (...labels: string[]) => {
+const setupUsed = (usedBy: (initial: Option[]) => UsedBy, ...labels: string[]) => {
   const initial = options(...labels);
   const user = userEvent.setup();
-  const view = render(<Harness initial={initial} />);
+  const view = render(<Harness initial={initial} usedBy={usedBy(initial)} />);
   return { user, initial, ...view };
 };
+
+const setup = (...labels: string[]) => setupUsed(() => unused, ...labels);
+
+/** Card, Cash and Invoice, where a required condition on Receipt number compares with Cash. */
+function cashInUse() {
+  const receipt = textField('Receipt number');
+  return setupUsed(
+    ([, cash]) =>
+      (optionId) =>
+        optionId === cash!.id ? [{ field: receipt, reads: [{ effect: 'require', count: 1 }] }] : [],
+    'Card',
+    'Cash',
+    'Invoice',
+  );
+}
 
 const labelBox = (position: number) =>
   screen.getByRole('textbox', { name: `Option ${position} label` });
@@ -92,6 +112,56 @@ describe('Options editor', () => {
       });
       expect(labelBox(2)).toHaveFocus();
       await expectAnnounced('Cash removed');
+    });
+
+    it('asks before removing an option a condition compares with, naming the field', async () => {
+      const { user } = cashInUse();
+
+      await user.click(screen.getByRole('button', { name: 'Remove Cash' }));
+
+      const dialog = screen.getByRole('dialog', { name: 'Remove Cash?' });
+      expect(within(dialog).getByRole('listitem')).toHaveTextContent(
+        'Receipt number: 1 required condition',
+      );
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+      expect(labels()).toEqual(['Card', 'Cash', 'Invoice']);
+    });
+
+    it('keeps the option and returns focus to its Remove button on Cancel or Escape', async () => {
+      const { user } = cashInUse();
+      const remove = screen.getByRole('button', { name: 'Remove Cash' });
+
+      await user.click(remove);
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(remove).toHaveFocus();
+
+      await user.click(remove);
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(remove).toHaveFocus();
+      expect(labels()).toEqual(['Card', 'Cash', 'Invoice']);
+    });
+
+    it('removes the option on confirm, focuses the next option and announces what went with it', async () => {
+      const { user } = cashInUse();
+
+      await user.click(screen.getByRole('button', { name: 'Remove Cash' }));
+      await user.click(screen.getByRole('button', { name: 'Remove option and conditions' }));
+
+      expect(labels()).toEqual(['Card', 'Invoice']);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(labelBox(2)).toHaveFocus();
+      await expectAnnounced('Cash removed, and 1 condition on Receipt number.');
+    });
+
+    it('removes an option nothing compares with without asking', async () => {
+      const { user } = cashInUse();
+
+      await user.click(screen.getByRole('button', { name: 'Remove Invoice' }));
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(labels()).toEqual(['Card', 'Cash']);
     });
 
     it('moves focus to the previous option when the last one is removed', async () => {

@@ -6,6 +6,7 @@ import { useRepositories } from '../../storage/StorageContext';
 import type { StorageError } from '../../storage/result';
 import { builderReducer, initialBuilderState } from './builderReducer';
 import { configIssues } from './configIssues';
+import { conditionWarnings } from './conditions/conditionWarnings';
 
 export type SaveOutcome =
   | { status: 'saved'; template: FormTemplate }
@@ -18,6 +19,9 @@ export type SaveOutcome =
  * The builder's state, the problems that block Save, and Save itself. Save writes the template
  * only through this hook, and only when there is nothing to fix.
  *
+ * Warnings (D-2, D-3) are a separate channel on purpose: Save reads `issues` only, so a warning
+ * can never block it.
+ *
  * The dependency graph is rebuilt only when the fields change. That still happens on every
  * label keystroke, which is fine: building it is linear in fields plus conditions.
  */
@@ -26,6 +30,10 @@ export function useBuilder(initial: FormTemplate) {
   const [state, dispatch] = useReducer(builderReducer, initial, initialBuilderState);
   const graph = useMemo(() => buildDependencyGraph(state.template.fields), [state.template.fields]);
   const issues = useMemo(() => configIssues(state.template, graph), [state.template, graph]);
+  const warnings = useMemo(
+    () => new Map(state.template.fields.map((field) => [field.id, conditionWarnings(field)])),
+    [state.template.fields],
+  );
 
   const save = useCallback((): SaveOutcome => {
     if (issues.count > 0) return { status: 'invalid' };
@@ -36,5 +44,5 @@ export function useBuilder(initial: FormTemplate) {
     return { status: 'saved', template: saved };
   }, [issues.count, state.template, templates]);
 
-  return { state, dispatch, graph, issues, save };
+  return { state, dispatch, graph, issues, warnings, save };
 }
