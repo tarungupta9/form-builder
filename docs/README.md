@@ -4,6 +4,7 @@
 - [`high-level-design.md`](high-level-design.md): data model, module interfaces and the gap decisions (`D-n`).
 - [`implementation-plan.md`](implementation-plan.md): the build order as verified slices, with each slice's gate and demo script.
 - [`ai-usage-log.md`](ai-usage-log.md): significant AI prompts, what was verified, and what was rejected.
+- [`qa-report.md`](qa-report.md): the pre-submission QA pass: automated gates, browser-run scenarios, findings and how each was resolved.
 
 ## Decision log
 

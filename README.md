@@ -1,6 +1,6 @@
 # Form builder
 
-Design form templates in Builder mode, fill them in, and export each response as a PDF. Everything runs in the browser and is stored in `localStorage`. **Version: v1.0** (in review).
+Design form templates in Builder mode, fill them in, and export each response as a PDF. Everything runs in the browser and is stored in `localStorage`. **Version: v1.0.1**.
 
 - **Builder:** the spec's nine field types (Short text, Long text, Number, Date, Single select as radio, dropdown or tiles, Multi select, Section header, File upload, Calculation), each with its own settings. Fields reorder by drag (mouse or keyboard) or with _Move up_ / _Move down_. The form can be previewed before saving, unsaved changes are protected, and a template can be deleted with its responses.
 - **Conditions:** a field can be shown, hidden, required or made optional by conditions on other fields' answers, chains included. The builder refuses loops, warns about conditions that cannot change anything, and asks before removing a field or option that conditions use.
@@ -145,6 +145,7 @@ The spec leaves these open; each is a `D-n` entry in [the design](docs/high-leve
 | Drafts (D-23)                  | Listed under _In progress_ with _Resume_ and _Discard_. A pre-filled date is not input, so opening a form and leaving saves nothing.                                                                                           |
 | Empty templates (D-20, D-36)   | Can be saved, but _New response_ on the card and _Preview_ in the builder are disabled, each with the reason shown as text. Problems that block Save never disable _Preview_.                                                  |
 | Titles and labels (D-34, D-35) | A template cannot be saved without a title, nor a field without a label. Each Save issue focuses the control that fixes it.                                                                                                    |
+| PDF after submit (D-23)        | _Download PDF_ appears once a response is submitted, not while it is a draft: the PDF carries a submission timestamp, and a submitted response never changes, so every download of it matches.                                 |
 | What the PDF shows             | Title, description, "Submitted" in the viewer's time zone with its name, the response ID, then every field of the snapshot in form order; "Not answered" for an empty answer; files as `hotel.pdf · 2.4 MB · PDF` with a note. |
 
 ## Known trade-offs
